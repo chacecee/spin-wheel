@@ -77,9 +77,12 @@ export default function App() {
   const [sdkReady, setSdkReady] = useState(false);
   const [isBrowserMode, setIsBrowserMode] = useState(false);
   const [participantDebug, setParticipantDebug] = useState("not fetched yet");
+  const [renderCheckpoint, setRenderCheckpoint] = useState("Component started");
 
   const [authDebug, setAuthDebug] = useState("not started");
   const [discordAuthUser, setDiscordAuthUser] = useState(null);
+
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -127,7 +130,11 @@ export default function App() {
           return;
         }
 
+        setRenderCheckpoint("About to call setupDiscordSdk");
+
         const sdk = await setupDiscordSdk();
+
+        setRenderCheckpoint("setupDiscordSdk finished");
 
         console.log("Discord SDK ready");
         console.log("Discord instance ID:", sdk.instanceId);
@@ -220,6 +227,8 @@ export default function App() {
       try {
         setAuthDebug("Starting authorize...");
 
+        setRenderCheckpoint("About to authorize");
+
         const authResult = await authorizeDiscordUser();
         const code = authResult?.code;
 
@@ -256,6 +265,8 @@ export default function App() {
         setAuthDebug("Access token received. Authenticating user...");
 
         const authUser = await authenticateDiscordUser(accessToken);
+
+        setRenderCheckpoint("authenticate finished");
 
         setDiscordAuthUser(authUser?.user || null);
         setAuthDebug(
@@ -1136,739 +1147,766 @@ export default function App() {
             width: "100%",
             maxWidth: "960px",
             marginBottom: "12px",
-            padding: "10px 12px",
-            borderRadius: "6px",
-            background: "rgba(7, 12, 24, 0.92)",
-            border: "1px solid rgba(255,255,255,0.14)",
-            color: "#d1d5db",
-            fontSize: "12px",
-            lineHeight: 1.5,
+            display: "flex",
+            justifyContent: "flex-end",
           }}
         >
-          <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
-          <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
-          <div><strong>browser mode</strong> — {isBrowserMode ? "yes" : "no"}</div>
-          <div><strong>discord participants</strong> — {discordParticipants.length}</div>
-          <div><strong>local user id</strong> — {localUserId}</div>
-          <div>
-            <strong>participant names</strong> —{" "}
-            {discordParticipants.length > 0
-              ? discordParticipants
-                .map((p) => p.global_name || p.username || p.id || "unknown")
-                .join(", ")
-              : "none"}
-          </div>
-          <div><strong>debug</strong> — {debugMessage}</div>
-
-          <div><strong>auth debug</strong> — {authDebug}</div>
-          <div><strong>authed user</strong> — {discordAuthUser?.username || discordAuthUser?.global_name || "none"}</div>
-
-          <div>
-            <strong>participant raw</strong> —
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                margin: "6px 0 0",
-                background: "rgba(255,255,255,0.04)",
-                padding: "8px",
-                borderRadius: "4px",
-                overflowX: "auto",
-              }}
-            >
-              {participantDebug}
-            </pre>
-          </div>
+          <button
+            onClick={() => setShowDebugPanel((prev) => !prev)}
+            style={{
+              background: "rgba(7, 12, 24, 0.92)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "#d1d5db",
+              borderRadius: "6px",
+              padding: "8px 12px",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            {showDebugPanel ? "Hide Debug" : "Show Debug"}
+          </button>
         </div>
 
+        {showDebugPanel && (
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "960px",
+              marginBottom: "12px",
+              padding: "10px 12px",
+              borderRadius: "6px",
+              background: "rgba(7, 12, 24, 0.92)",
+              border: "1px solid rgba(255,255,255,0.14)",
+              color: "#d1d5db",
+              fontSize: "12px",
+              lineHeight: 1.5,
+            }}
+          >
+            <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
+            <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
+            <div><strong>browser mode</strong> — {isBrowserMode ? "yes" : "no"}</div>
+            <div><strong>discord participants</strong> — {discordParticipants.length}</div>
+            <div><strong>local user id</strong> — {localUserId}</div>
+            <div>
+              <strong>participant names</strong> —{" "}
+              {discordParticipants.length > 0
+                ? discordParticipants
+                  .map((p) => p.global_name || p.username || p.id || "unknown")
+                  .join(", ")
+                : "none"}
+            </div>
+            <div><strong>debug</strong> — {debugMessage}</div>
+            <div><strong>render checkpoint</strong> — {renderCheckpoint}</div>
+            <div><strong>auth debug</strong> — {authDebug}</div>
+            <div><strong>authed user</strong> — {discordAuthUser?.username || discordAuthUser?.global_name || "none"}</div>
 
+            <div>
+              <strong>participant raw</strong> —
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  margin: "6px 0 0",
+                  background: "rgba(255,255,255,0.04)",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  overflowX: "auto",
+                  maxHeight: "220px",
+                  overflowY: "auto",
+                }}
+              >
+                {participantDebug}
+              </pre>
+            </div>
+          </div>
+        )}
+        
+      <div
+        style={{
+          width: "100%",
+          maxWidth: stageIsWheel ? "1400px" : "760px",
+          position: "relative",
+        }}
+      >
+        {(phase === "ready" || phase === "result") && isHost && (
+          <button
+            onClick={handleEditSetup}
+            style={{
+              position: "absolute",
+              top: "18px",
+              right: "6px",
+              background: "transparent",
+              border: "1px solid rgba(255,255,255,0.26)",
+              color: "rgba(255,255,255,0.82)",
+              fontSize: "14px",
+              cursor: "pointer",
+              padding: "7px 12px",
+              borderRadius: "5px",
+              zIndex: 20,
+            }}
+          >
+            Edit
+          </button>
+        )}
 
-        <div
-          style={{
-            width: "100%",
-            maxWidth: stageIsWheel ? "1400px" : "760px",
-            position: "relative",
-          }}
-        >
-          {(phase === "ready" || phase === "result") && isHost && (
-            <button
-              onClick={handleEditSetup}
-              style={{
-                position: "absolute",
-                top: "18px",
-                right: "6px",
-                background: "transparent",
-                border: "1px solid rgba(255,255,255,0.26)",
-                color: "rgba(255,255,255,0.82)",
-                fontSize: "14px",
-                cursor: "pointer",
-                padding: "7px 12px",
-                borderRadius: "5px",
-                zIndex: 20,
-              }}
-            >
-              Edit
-            </button>
-          )}
+        {!stageIsWheel && (
+          <h1
+            style={{
+              textAlign: "center",
+              fontSize: "32px",
+              fontWeight: "800",
+              marginBottom: "18px",
+              marginTop: "0",
+              letterSpacing: "-0.03em",
+            }}
+          >
+            Spin the Wheel
+          </h1>
+        )}
 
-          {!stageIsWheel && (
-            <h1
-              style={{
-                textAlign: "center",
-                fontSize: "32px",
-                fontWeight: "800",
-                marginBottom: "18px",
-                marginTop: "0",
-                letterSpacing: "-0.03em",
-              }}
-            >
-              Spin the Wheel
-            </h1>
-          )}
-
-          {phase === "editing" ? (
-            <>
-              {isHost ? (
+        {phase === "editing" ? (
+          <>
+            {isHost ? (
+              <div
+                style={{
+                  width: "100%",
+                  padding: "0",
+                }}
+              >
                 <div
                   style={{
-                    width: "100%",
-                    padding: "0",
+                    marginBottom: "18px",
+                    textAlign: "left",
                   }}
                 >
                   <div
                     style={{
-                      marginBottom: "18px",
-                      textAlign: "left",
+                      marginBottom: "10px",
+                      fontWeight: "bold",
                     }}
                   >
-                    <div
-                      style={{
-                        marginBottom: "10px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Transfer host
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "8px",
-                        alignItems: "stretch",
-                      }}
-                    >
-                      <select
-                        value={selectedHostId}
-                        onChange={(e) => setSelectedHostId(e.target.value)}
-                        style={{
-                          flex: "0 1 420px",
-                          maxWidth: "420px",
-                          padding: "12px",
-                          borderRadius: "5px",
-                          border: "1px solid #334155",
-                          background: "#091833",
-                          color: "white",
-                          fontSize: "16px",
-                        }}
-                      >
-                        <option value="">Select a participant</option>
-                        {transferCandidates.map((participant) => (
-                          <option key={participant.id} value={participant.id}>
-                            {participant.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <button onClick={handleTransferHost} style={purpleButtonStyle}>
-                        Transfer Host
-                      </button>
-                    </div>
+                    Transfer host
                   </div>
 
                   <div
                     style={{
-                      marginBottom: "20px",
-                      textAlign: "left",
                       display: "flex",
+                      gap: "8px",
+                      alignItems: "stretch",
+                    }}
+                  >
+                    <select
+                      value={selectedHostId}
+                      onChange={(e) => setSelectedHostId(e.target.value)}
+                      style={{
+                        flex: "0 1 420px",
+                        maxWidth: "420px",
+                        padding: "12px",
+                        borderRadius: "5px",
+                        border: "1px solid #334155",
+                        background: "#091833",
+                        color: "white",
+                        fontSize: "16px",
+                      }}
+                    >
+                      <option value="">Select a participant</option>
+                      {transferCandidates.map((participant) => (
+                        <option key={participant.id} value={participant.id}>
+                          {participant.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button onClick={handleTransferHost} style={purpleButtonStyle}>
+                      Transfer Host
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    marginBottom: "20px",
+                    textAlign: "left",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "inline-flex",
                       alignItems: "center",
-                      gap: "12px",
+                      gap: "10px",
                       flexWrap: "wrap",
                     }}
                   >
-                    <div
+                    <span
                       style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "10px",
-                        flexWrap: "wrap",
+                        color:
+                          draftMode === "custom"
+                            ? "#ffffff"
+                            : "rgba(255,255,255,0.55)",
+                        fontWeight: draftMode === "custom" ? 700 : 500,
+                      }}
+                    >
+                      Spin Custom Entries
+                    </span>
+
+                    <button
+                      onClick={() =>
+                        handleModeChange(
+                          draftMode === "custom" ? "participants" : "custom"
+                        )
+                      }
+                      style={{
+                        width: "58px",
+                        height: "30px",
+                        borderRadius: "999px",
+                        border: "1px solid #56308d",
+                        background:
+                          draftMode === "participants" ? "#3a1d63" : "#111827",
+                        position: "relative",
+                        padding: 0,
                       }}
                     >
                       <span
                         style={{
-                          color:
-                            draftMode === "custom"
-                              ? "#ffffff"
-                              : "rgba(255,255,255,0.55)",
-                          fontWeight: draftMode === "custom" ? 700 : 500,
-                        }}
-                      >
-                        Spin Custom Entries
-                      </span>
-
-                      <button
-                        onClick={() =>
-                          handleModeChange(
-                            draftMode === "custom" ? "participants" : "custom"
-                          )
-                        }
-                        style={{
-                          width: "58px",
-                          height: "30px",
+                          position: "absolute",
+                          top: "3px",
+                          left: draftMode === "participants" ? "31px" : "3px",
+                          width: "22px",
+                          height: "22px",
                           borderRadius: "999px",
-                          border: "1px solid #56308d",
-                          background:
-                            draftMode === "participants" ? "#3a1d63" : "#111827",
-                          position: "relative",
-                          padding: 0,
+                          background: "#ffffff",
+                          transition: "left 0.2s ease",
                         }}
-                      >
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: "3px",
-                            left: draftMode === "participants" ? "31px" : "3px",
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "999px",
-                            background: "#ffffff",
-                            transition: "left 0.2s ease",
-                          }}
-                        />
-                      </button>
+                      />
+                    </button>
 
-                      <span
-                        style={{
-                          color:
-                            draftMode === "participants"
-                              ? "#ffffff"
-                              : "rgba(255,255,255,0.55)",
-                          fontWeight: draftMode === "participants" ? 700 : 500,
-                        }}
-                      >
-                        Spin Participants
-                      </span>
-                    </div>
-                  </div>
-
-                  <div style={{ textAlign: "left" }}>
-                    <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
-                      Entries
-                    </div>
-
-                    <div
+                    <span
                       style={{
-                        maxHeight: "198px",
-                        overflowY: "auto",
-                        paddingRight: "4px",
-                        marginBottom: "12px",
+                        color:
+                          draftMode === "participants"
+                            ? "#ffffff"
+                            : "rgba(255,255,255,0.55)",
+                        fontWeight: draftMode === "participants" ? 700 : 500,
                       }}
                     >
-                      {draftEntries.map((entry, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            display: "flex",
-                            gap: "10px",
-                            marginBottom: "10px",
-                            alignItems: "center",
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={entry}
-                            placeholder={`Entry ${index + 1}`}
-                            onChange={(e) => handleEntryChange(index, e.target.value)}
-                            style={{
-                              flex: 1,
-                              padding: "12px",
-                              borderRadius: "5px",
-                              border: "1px solid #334155",
-                              background: "#091833",
-                              color: "white",
-                              fontSize: "16px",
-                            }}
-                          />
+                      Spin Participants
+                    </span>
+                  </div>
+                </div>
 
-                          <button
-                            onClick={() => handleRemoveDraftEntry(index)}
-                            style={iconButtonStyle}
-                            aria-label="Remove entry"
-                            title="Remove entry"
-                          >
-                            <svg
-                              width="18"
-                              height="18"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M3 6h18" />
-                              <path d="M8 6V4h8v2" />
-                              <path d="M19 6l-1 14H6L5 6" />
-                              <path d="M10 11v6" />
-                              <path d="M14 11v6" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{ marginTop: "12px", display: "flex", gap: "10px" }}>
-                      <button onClick={handleAddDraftEntry} style={purpleButtonStyle}>
-                        Add More
-                      </button>
-                      <button onClick={handleSaveSetup} style={purpleButtonStyle}>
-                        Go to Spinner
-                      </button>
-                    </div>
+                <div style={{ textAlign: "left" }}>
+                  <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
+                    Entries
                   </div>
 
-                  <p
+                  <div
                     style={{
-                      marginTop: "18px",
-                      fontSize: "14px",
-                      color: "#86efac",
+                      maxHeight: "198px",
+                      overflowY: "auto",
+                      paddingRight: "4px",
+                      marginBottom: "12px",
                     }}
                   >
-                    {debugMessage}
-                  </p>
+                    {draftEntries.map((entry, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          marginBottom: "10px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          value={entry}
+                          placeholder={`Entry ${index + 1}`}
+                          onChange={(e) => handleEntryChange(index, e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: "12px",
+                            borderRadius: "5px",
+                            border: "1px solid #334155",
+                            background: "#091833",
+                            color: "white",
+                            fontSize: "16px",
+                          }}
+                        />
+
+                        <button
+                          onClick={() => handleRemoveDraftEntry(index)}
+                          style={iconButtonStyle}
+                          aria-label="Remove entry"
+                          title="Remove entry"
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 6h18" />
+                            <path d="M8 6V4h8v2" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6" />
+                            <path d="M14 11v6" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: "12px", display: "flex", gap: "10px" }}>
+                    <button onClick={handleAddDraftEntry} style={purpleButtonStyle}>
+                      Add More
+                    </button>
+                    <button onClick={handleSaveSetup} style={purpleButtonStyle}>
+                      Go to Spinner
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div
+
+                <p
                   style={{
-                    marginTop: "20px",
-                    padding: "16px",
-                    borderRadius: "5px",
-                    background: "#091833",
-                    border: "1px solid #334155",
+                    marginTop: "18px",
+                    fontSize: "14px",
+                    color: "#86efac",
                   }}
                 >
-                  Host is currently setting up the wheel.
-                </div>
-              )}
-            </>
-          ) : (
-            <>
+                  {debugMessage}
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  marginTop: "20px",
+                  padding: "16px",
+                  borderRadius: "5px",
+                  background: "#091833",
+                  border: "1px solid #334155",
+                }}
+              >
+                Host is currently setting up the wheel.
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                minHeight: "calc(100vh - 28px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+              }}
+            >
               <div
                 style={{
                   position: "relative",
-                  width: "100%",
-                  minHeight: "calc(100vh - 28px)",
+                  width: "min(96vw, 90vh, 1120px)",
+                  aspectRatio: "1 / 1",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  overflow: "hidden",
+                  marginTop: "6px",
                 }}
               >
                 <div
                   style={{
                     position: "relative",
-                    width: "min(96vw, 90vh, 1120px)",
-                    aspectRatio: "1 / 1",
+                    width: "100%",
+                    height: "100%",
+                    transform: `rotate(${displayRotation}deg)`,
+                    transition:
+                      phase === "spinning"
+                        ? "transform 5s cubic-bezier(0.12, 0.8, 0.2, 1)"
+                        : "none",
+                    zIndex: 2,
+                  }}
+                >
+                  <svg
+                    width="100%"
+                    height="100%"
+                    viewBox={`0 0 ${wheelSize} ${wheelSize}`}
+                    style={{
+                      filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+                    }}
+                  >
+                    <defs>
+                      <radialGradient id="rimPurpleGradient" cx="50%" cy="40%" r="70%">
+                        <stop offset="0%" stopColor="#8e57d3" />
+                        <stop offset="55%" stopColor={RIM_PURPLE} />
+                        <stop offset="100%" stopColor={RIM_PURPLE_DARK} />
+                      </radialGradient>
+
+                      <radialGradient id="goldStudGradient" cx="35%" cy="30%" r="75%">
+                        <stop offset="0%" stopColor="#fff6c7" />
+                        <stop offset="40%" stopColor="#f8d96b" />
+                        <stop offset="75%" stopColor="#d19a1b" />
+                        <stop offset="100%" stopColor="#8d5b0d" />
+                      </radialGradient>
+
+                      <radialGradient id="hubDarkGradient" cx="40%" cy="35%" r="80%">
+                        <stop offset="0%" stopColor="#4b3720" />
+                        <stop offset="38%" stopColor="#2b2119" />
+                        <stop offset="100%" stopColor="#17120f" />
+                      </radialGradient>
+                    </defs>
+
+                    <circle
+                      cx={center}
+                      cy={center}
+                      r={outerRadius}
+                      fill="url(#rimPurpleGradient)"
+                      stroke="#a874ea"
+                      strokeWidth="1.1"
+                    />
+
+                    {currentEntries.map((entry, index) => {
+                      const startAngle = index * sliceAngle;
+                      const endAngle = (index + 1) * sliceAngle;
+                      const midAngle = startAngle + sliceAngle / 2;
+                      const path = describeArcSlice(
+                        center,
+                        center,
+                        sliceRadius,
+                        startAngle,
+                        endAngle
+                      );
+
+                      const textRadius = sliceRadius * 0.74;
+                      const textPoint = polarToCartesian(
+                        center,
+                        center,
+                        textRadius,
+                        midAngle
+                      );
+                      const textRotation = midAngle;
+                      const textColor = getSliceTextColor(index);
+                      const fillColor = getSliceFill(index);
+
+                      return (
+                        <g key={`${entry}-${index}`}>
+                          <path
+                            d={path}
+                            fill={fillColor}
+                            stroke="rgba(20,20,20,0.14)"
+                            strokeWidth="0.8"
+                          />
+                          <text
+                            x={textPoint.x}
+                            y={textPoint.y}
+                            fill={textColor}
+                            fontSize={
+                              currentEntries.length > 10
+                                ? "12"
+                                : currentEntries.length > 7
+                                  ? "14"
+                                  : "16"
+                            }
+                            fontWeight="700"
+                            letterSpacing="0.2px"
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            transform={`rotate(${textRotation} ${textPoint.x} ${textPoint.y})`}
+                          >
+                            {entry.length > 18 ? entry.slice(0, 18) + "…" : entry}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    {Array.from({ length: studCount }).map((_, index) => {
+                      const angle = (360 / studCount) * index;
+                      const point = polarToCartesian(
+                        center,
+                        center,
+                        studRingRadius,
+                        angle
+                      );
+
+                      return (
+                        <circle
+                          key={index}
+                          cx={point.x}
+                          cy={point.y}
+                          r="4.2"
+                          fill="url(#goldStudGradient)"
+                          stroke="#fff0a5"
+                          strokeWidth="0.8"
+                        />
+                      );
+                    })}
+
+                    <circle
+                      cx={center}
+                      cy={center}
+                      r={hubRadius}
+                      fill="url(#hubDarkGradient)"
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth="3"
+                    />
+
+                    <circle
+                      cx={center}
+                      cy={center}
+                      r={hubRadius * 0.78}
+                      fill="rgba(255,255,255,0.035)"
+                    />
+                  </svg>
+                </div>
+
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "16%",
+                    top: "50%",
+                    transform: "translateY(-50%) rotate(90deg)",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "16px solid transparent",
+                    borderRight: "16px solid transparent",
+                    borderTop: `34px solid ${GOLD_MAIN}`,
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+                    zIndex: 7,
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    right: "14%",
+                    top: "50%",
+                    transform: "translateY(-50%) rotate(90deg)",
+                    width: "22px",
+                    height: "28px",
+                    borderRadius: "0 0 5px 5px",
+                    background:
+                      "linear-gradient(180deg, #fff3b5 0%, #d8a81f 48%, #8b580f 100%)",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                    zIndex: 6,
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: "6px",
+                    zIndex: 8,
+                    pointerEvents: "none",
                   }}
                 >
                   <div
+                    onClick={phase === "ready" && isHost ? handleSpin : undefined}
                     style={{
-                      position: "relative",
-                      width: "100%",
-                      height: "100%",
-                      transform: `rotate(${displayRotation}deg)`,
-                      transition:
-                        phase === "spinning"
-                          ? "transform 5s cubic-bezier(0.12, 0.8, 0.2, 1)"
-                          : "none",
-                      zIndex: 2,
-                    }}
-                  >
-                    <svg
-                      width="100%"
-                      height="100%"
-                      viewBox={`0 0 ${wheelSize} ${wheelSize}`}
-                      style={{
-                        filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
-                      }}
-                    >
-                      <defs>
-                        <radialGradient id="rimPurpleGradient" cx="50%" cy="40%" r="70%">
-                          <stop offset="0%" stopColor="#8e57d3" />
-                          <stop offset="55%" stopColor={RIM_PURPLE} />
-                          <stop offset="100%" stopColor={RIM_PURPLE_DARK} />
-                        </radialGradient>
-
-                        <radialGradient id="goldStudGradient" cx="35%" cy="30%" r="75%">
-                          <stop offset="0%" stopColor="#fff6c7" />
-                          <stop offset="40%" stopColor="#f8d96b" />
-                          <stop offset="75%" stopColor="#d19a1b" />
-                          <stop offset="100%" stopColor="#8d5b0d" />
-                        </radialGradient>
-
-                        <radialGradient id="hubDarkGradient" cx="40%" cy="35%" r="80%">
-                          <stop offset="0%" stopColor="#4b3720" />
-                          <stop offset="38%" stopColor="#2b2119" />
-                          <stop offset="100%" stopColor="#17120f" />
-                        </radialGradient>
-                      </defs>
-
-                      <circle
-                        cx={center}
-                        cy={center}
-                        r={outerRadius}
-                        fill="url(#rimPurpleGradient)"
-                        stroke="#a874ea"
-                        strokeWidth="1.1"
-                      />
-
-                      {currentEntries.map((entry, index) => {
-                        const startAngle = index * sliceAngle;
-                        const endAngle = (index + 1) * sliceAngle;
-                        const midAngle = startAngle + sliceAngle / 2;
-                        const path = describeArcSlice(
-                          center,
-                          center,
-                          sliceRadius,
-                          startAngle,
-                          endAngle
-                        );
-
-                        const textRadius = sliceRadius * 0.74;
-                        const textPoint = polarToCartesian(
-                          center,
-                          center,
-                          textRadius,
-                          midAngle
-                        );
-                        const textRotation = midAngle;
-                        const textColor = getSliceTextColor(index);
-                        const fillColor = getSliceFill(index);
-
-                        return (
-                          <g key={`${entry}-${index}`}>
-                            <path
-                              d={path}
-                              fill={fillColor}
-                              stroke="rgba(20,20,20,0.14)"
-                              strokeWidth="0.8"
-                            />
-                            <text
-                              x={textPoint.x}
-                              y={textPoint.y}
-                              fill={textColor}
-                              fontSize={
-                                currentEntries.length > 10
-                                  ? "12"
-                                  : currentEntries.length > 7
-                                    ? "14"
-                                    : "16"
-                              }
-                              fontWeight="700"
-                              letterSpacing="0.2px"
-                              textAnchor="middle"
-                              dominantBaseline="middle"
-                              transform={`rotate(${textRotation} ${textPoint.x} ${textPoint.y})`}
-                            >
-                              {entry.length > 18 ? entry.slice(0, 18) + "…" : entry}
-                            </text>
-                          </g>
-                        );
-                      })}
-
-                      {Array.from({ length: studCount }).map((_, index) => {
-                        const angle = (360 / studCount) * index;
-                        const point = polarToCartesian(
-                          center,
-                          center,
-                          studRingRadius,
-                          angle
-                        );
-
-                        return (
-                          <circle
-                            key={index}
-                            cx={point.x}
-                            cy={point.y}
-                            r="4.2"
-                            fill="url(#goldStudGradient)"
-                            stroke="#fff0a5"
-                            strokeWidth="0.8"
-                          />
-                        );
-                      })}
-
-                      <circle
-                        cx={center}
-                        cy={center}
-                        r={hubRadius}
-                        fill="url(#hubDarkGradient)"
-                        stroke="rgba(255,255,255,0.08)"
-                        strokeWidth="3"
-                      />
-
-                      <circle
-                        cx={center}
-                        cy={center}
-                        r={hubRadius * 0.78}
-                        fill="rgba(255,255,255,0.035)"
-                      />
-                    </svg>
-                  </div>
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "16%",
-                      top: "50%",
-                      transform: "translateY(-50%) rotate(90deg)",
-                      width: 0,
-                      height: 0,
-                      borderLeft: "16px solid transparent",
-                      borderRight: "16px solid transparent",
-                      borderTop: `34px solid ${GOLD_MAIN}`,
-                      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
-                      zIndex: 7,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: "14%",
-                      top: "50%",
-                      transform: "translateY(-50%) rotate(90deg)",
-                      width: "22px",
-                      height: "28px",
-                      borderRadius: "0 0 5px 5px",
+                      width: "19%",
+                      minWidth: "108px",
+                      maxWidth: "150px",
+                      aspectRatio: "1 / 1",
+                      borderRadius: "999px",
                       background:
-                        "linear-gradient(180deg, #fff3b5 0%, #d8a81f 48%, #8b580f 100%)",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-                      zIndex: 6,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
+                        "radial-gradient(circle at 35% 30%, #4a3722 0%, #231b15 50%, #15110e 100%)",
+                      border: "2px solid rgba(255,255,255,0.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      zIndex: 8,
-                      pointerEvents: "none",
+                      textAlign: "center",
+                      boxShadow: "0 12px 34px rgba(0,0,0,0.35)",
+                      pointerEvents: "auto",
+                      userSelect: "none",
+                      cursor: phase === "ready" && isHost ? "pointer" : "default",
+                    }}
+                  >
+                    {phase === "ready" && (
+                      <>
+                        {isHost ? (
+                          <div
+                            style={{
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: "clamp(20px, 2.1vw, 34px)",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Spin
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              color: "#e5e7eb",
+                              fontWeight: 700,
+                              fontSize: "clamp(12px, 1.1vw, 16px)",
+                              padding: "0 10px",
+                            }}
+                          >
+                            Waiting
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {phase === "spinning" && (
+                      <div
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: 800,
+                          fontSize: "clamp(14px, 1.5vw, 24px)",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        ...
+                      </div>
+                    )}
+
+                    {phase === "result" && (
+                      <div
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: 900,
+                          fontSize: "clamp(34px, 4vw, 58px)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {phase === "result" && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      bottom: "7%",
+                      transform: "translateX(-50%)",
+                      width: "min(72%, 560px)",
+                      background: "rgba(7, 7, 10, 0.95)",
+                      border: `1px solid ${GOLD_DARK}`,
+                      borderRadius: "5px",
+                      boxShadow:
+                        "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
+                      zIndex: 10,
+                      overflow: "hidden",
                     }}
                   >
                     <div
-                      onClick={phase === "ready" && isHost ? handleSpin : undefined}
                       style={{
-                        width: "19%",
-                        minWidth: "108px",
-                        maxWidth: "150px",
-                        aspectRatio: "1 / 1",
-                        borderRadius: "999px",
                         background:
-                          "radial-gradient(circle at 35% 30%, #4a3722 0%, #231b15 50%, #15110e 100%)",
-                        border: "2px solid rgba(255,255,255,0.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                          "linear-gradient(90deg, #6f4b08 0%, #c99819 35%, #f4d66f 50%, #c99819 65%, #6f4b08 100%)",
+                        color: "#17120b",
+                        padding: "10px 16px",
+                        fontWeight: "800",
                         textAlign: "center",
-                        boxShadow: "0 12px 34px rgba(0,0,0,0.35)",
-                        pointerEvents: "auto",
-                        userSelect: "none",
-                        cursor: phase === "ready" && isHost ? "pointer" : "default",
+                        letterSpacing: "0.2px",
+                        fontSize: "clamp(14px, 1vw, 16px)",
                       }}
                     >
-                      {phase === "ready" && (
+                      We have a winner!
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "18px 18px 16px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "clamp(28px, 4vw, 52px)",
+                          fontWeight: 300,
+                          marginBottom: "14px",
+                          color: "#fff7d7",
+                          textShadow: "0 0 20px rgba(212,166,42,0.08)",
+                          lineHeight: 1.05,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {winnerName || "Unknown"}
+                      </div>
+
+                      {isHost ? (
                         <>
-                          {isHost ? (
-                            <div
-                              style={{
-                                color: "#ffffff",
-                                fontWeight: 800,
-                                fontSize: "clamp(20px, 2.1vw, 34px)",
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
-                              }}
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "10px",
+                              marginBottom: "14px",
+                              color: "#f1e7bf",
+                              fontSize: "clamp(12px, 1vw, 16px)",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={removeWinnerNextSpin}
+                              onChange={(e) =>
+                                setRemoveWinnerNextSpin(e.target.checked)
+                              }
+                            />
+                            Remove winner from next spin
+                          </label>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "center",
+                              gap: "12px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <button
+                              onClick={handleKeepSpinning}
+                              style={mutedButtonStyle}
                             >
-                              Spin
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                color: "#e5e7eb",
-                                fontWeight: 700,
-                                fontSize: "clamp(12px, 1.1vw, 16px)",
-                                padding: "0 10px",
-                              }}
-                            >
-                              Waiting
-                            </div>
-                          )}
+                              Keep Spinning
+                            </button>
+                            <button onClick={handleStartFresh} style={mutedButtonStyle}>
+                              Start Fresh
+                            </button>
+                          </div>
                         </>
-                      )}
-
-                      {phase === "spinning" && (
-                        <div
-                          style={{
-                            color: "#ffffff",
-                            fontWeight: 800,
-                            fontSize: "clamp(14px, 1.5vw, 24px)",
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          ...
-                        </div>
-                      )}
-
-                      {phase === "result" && (
-                        <div
-                          style={{
-                            color: "#ffffff",
-                            fontWeight: 900,
-                            fontSize: "clamp(34px, 4vw, 58px)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          ✓
+                      ) : (
+                        <div style={{ color: "#d6d0b2" }}>
+                          Waiting for host to continue.
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {phase === "result" && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: "50%",
-                        bottom: "7%",
-                        transform: "translateX(-50%)",
-                        width: "min(72%, 560px)",
-                        background: "rgba(7, 7, 10, 0.95)",
-                        border: `1px solid ${GOLD_DARK}`,
-                        borderRadius: "5px",
-                        boxShadow:
-                          "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
-                        zIndex: 10,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(90deg, #6f4b08 0%, #c99819 35%, #f4d66f 50%, #c99819 65%, #6f4b08 100%)",
-                          color: "#17120b",
-                          padding: "10px 16px",
-                          fontWeight: "800",
-                          textAlign: "center",
-                          letterSpacing: "0.2px",
-                          fontSize: "clamp(14px, 1vw, 16px)",
-                        }}
-                      >
-                        We have a winner!
-                      </div>
-
-                      <div
-                        style={{
-                          padding: "18px 18px 16px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "clamp(28px, 4vw, 52px)",
-                            fontWeight: 300,
-                            marginBottom: "14px",
-                            color: "#fff7d7",
-                            textShadow: "0 0 20px rgba(212,166,42,0.08)",
-                            lineHeight: 1.05,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {winnerName || "Unknown"}
-                        </div>
-
-                        {isHost ? (
-                          <>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "10px",
-                                marginBottom: "14px",
-                                color: "#f1e7bf",
-                                fontSize: "clamp(12px, 1vw, 16px)",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={removeWinnerNextSpin}
-                                onChange={(e) =>
-                                  setRemoveWinnerNextSpin(e.target.checked)
-                                }
-                              />
-                              Remove winner from next spin
-                            </label>
-
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: "12px",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <button
-                                onClick={handleKeepSpinning}
-                                style={mutedButtonStyle}
-                              >
-                                Keep Spinning
-                              </button>
-                              <button onClick={handleStartFresh} style={mutedButtonStyle}>
-                                Start Fresh
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ color: "#d6d0b2" }}>
-                            Waiting for host to continue.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              <p
-                style={{
-                  marginTop: "4px",
-                  textAlign: "center",
-                  fontSize: "14px",
-                  color: "#86efac",
-                }}
-              >
-                {debugMessage}
-              </p>
-            </>
-          )}
-        </div>
+            <p
+              style={{
+                marginTop: "4px",
+                textAlign: "center",
+                fontSize: "14px",
+                color: "#86efac",
+              }}
+            >
+              {debugMessage}
+            </p>
+          </>
+        )}
       </div>
+    </div>
     </div>
   );
 }
