@@ -59,6 +59,8 @@ export default function App() {
   const [roomData, setRoomData] = useState(null);
   const [debugMessage, setDebugMessage] = useState("Starting connection...");
   const [discordInstanceId, setDiscordInstanceId] = useState(null);
+  const [showIntro, setShowIntro] = useState(true);
+  const [introFading, setIntroFading] = useState(false);
   const [draftMode, setDraftMode] = useState("custom");
   const [draftEntries, setDraftEntries] = useState([]);
   const [selectedHostId, setSelectedHostId] = useState("");
@@ -67,6 +69,7 @@ export default function App() {
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
+  const introAudioRef = useRef(null);
   const celebratedSpinRef = useRef(null);
   const spinFadeIntervalRef = useRef(null);
   const spinStopTimeoutRef = useRef(null);
@@ -115,6 +118,43 @@ export default function App() {
         console.error("Discord SDK failed to initialize:", error);
         setDebugMessage("This app must be launched from inside Discord Activity.");
       });
+  }, []);
+
+
+  useEffect(() => {
+    try {
+      if (introAudioRef.current) {
+        introAudioRef.current.currentTime = 0;
+        introAudioRef.current.volume = 0.8;
+        introAudioRef.current.play().catch(() => { });
+      }
+    } catch (error) {
+      console.error("Intro audio failed:", error);
+    }
+
+    const confettiTimer = setTimeout(() => {
+      confetti({
+        particleCount: 90,
+        spread: 75,
+        startVelocity: 24,
+        origin: { y: 0.48 },
+        scalar: 0.9,
+      });
+    }, 500);
+
+    const fadeTimer = setTimeout(() => {
+      setIntroFading(true);
+    }, 1900);
+
+    const hideTimer = setTimeout(() => {
+      setShowIntro(false);
+    }, 2600);
+
+    return () => {
+      clearTimeout(confettiTimer);
+      clearTimeout(fadeTimer);
+      clearTimeout(hideTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -574,6 +614,11 @@ export default function App() {
       return;
     }
 
+    if (currentEntries.length < 2) {
+      setDebugMessage("You need at least 2 entries to spin.");
+      return;
+    }
+
     const nextWinnerIndex = Math.floor(Math.random() * currentEntries.length);
     const localSliceAngle = 360 / currentEntries.length;
 
@@ -746,6 +791,148 @@ export default function App() {
     >
       <audio ref={tadaAudioRef} src="/tada.mp3" preload="auto" />
       <audio ref={spinAudioRef} src="/spin.mp3" preload="auto" />
+      <audio ref={introAudioRef} src="/gamesound.mp3" preload="auto" />
+
+      {showIntro && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background:
+              "radial-gradient(circle at center, rgba(39,22,65,0.50) 0%, rgba(8,13,28,0.88) 58%, rgba(3,5,10,0.98) 100%)",
+            opacity: introFading ? 0 : 1,
+            transition: "opacity 0.7s ease",
+            pointerEvents: "none",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: "min(72vw, 72vh, 720px)",
+              aspectRatio: "1 / 1",
+              borderRadius: "999px",
+              background:
+                "radial-gradient(circle, rgba(255,220,120,0.06) 0%, rgba(122,73,184,0.08) 38%, rgba(0,0,0,0) 72%)",
+              animation: "introWheelPulse 2.2s ease-in-out infinite",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              width: "min(52vw, 52vh, 520px)",
+              aspectRatio: "1 / 1",
+              borderRadius: "999px",
+              border: "10px solid rgba(123, 73, 191, 0.85)",
+              boxShadow:
+                "0 0 0 2px rgba(212,166,42,0.22), inset 0 0 30px rgba(0,0,0,0.25), 0 0 50px rgba(0,0,0,0.28)",
+              background:
+                "conic-gradient(from 0deg, rgba(243,171,8,0.95) 0deg 60deg, rgba(216,212,200,0.98) 60deg 120deg, rgba(228,68,68,0.95) 120deg 180deg, rgba(216,212,200,0.98) 180deg 240deg, rgba(39,147,115,0.95) 240deg 300deg, rgba(216,212,200,0.98) 300deg 360deg)",
+              opacity: 0.32,
+              filter: "blur(0.2px)",
+              animation: "introWheelSpin 5s linear infinite",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: "36%",
+                borderRadius: "999px",
+                background:
+                  "radial-gradient(circle at 35% 30%, rgba(90,60,25,0.92) 0%, rgba(35,24,18,0.96) 55%, rgba(18,14,12,0.98) 100%)",
+                boxShadow: "0 0 18px rgba(0,0,0,0.32)",
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              position: "relative",
+              textAlign: "center",
+              zIndex: 2,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "clamp(40px, 6vw, 92px)",
+                fontWeight: 900,
+                letterSpacing: "-0.04em",
+                lineHeight: 1,
+                color: "#f6d97a",
+                textShadow:
+                  "0 0 12px rgba(244,214,111,0.26), 0 0 28px rgba(212,166,42,0.18), 0 4px 24px rgba(0,0,0,0.42)",
+                position: "relative",
+              }}
+            >
+              <span
+                style={{
+                  position: "relative",
+                  display: "inline-block",
+                  overflow: "hidden",
+                  padding: "0 12px",
+                }}
+              >
+                Spin the Wheel
+
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: "-35%",
+                    width: "30%",
+                    height: "100%",
+                    transform: "skewX(-20deg)",
+                    background:
+                      "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,245,200,0.85) 50%, rgba(255,255,255,0) 100%)",
+                    animation: "introShine 1.6s ease-in-out 0.35s 1 forwards",
+                    pointerEvents: "none",
+                  }}
+                />
+              </span>
+            </div>
+
+            <div
+              style={{
+                marginTop: "14px",
+                fontSize: "clamp(12px, 1.2vw, 16px)",
+                letterSpacing: "0.32em",
+                textTransform: "uppercase",
+                color: "rgba(255,231,170,0.72)",
+              }}
+            >
+              Random Spinner
+            </div>
+
+            {[
+              { top: "-18px", left: "8%", delay: "0s" },
+              { top: "8px", right: "-6%", delay: "0.25s" },
+              { bottom: "-10px", left: "18%", delay: "0.5s" },
+              { bottom: "4px", right: "12%", delay: "0.8s" },
+              { top: "-28px", right: "18%", delay: "1.1s" },
+            ].map((sparkle, index) => (
+              <span
+                key={index}
+                style={{
+                  position: "absolute",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "999px",
+                  background:
+                    "radial-gradient(circle, #fff6c9 0%, #f2c94c 60%, rgba(242,201,76,0) 100%)",
+                  boxShadow: "0 0 10px rgba(242,201,76,0.65)",
+                  animation: `introSparkle 1.6s ease-in-out ${sparkle.delay} infinite`,
+                  ...sparkle,
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {stageIsWheel && (
         <svg

@@ -49,3 +49,68 @@ button {
 button:hover {
   background: #16a34a;
 }
+
+@keyframes introShine {
+  0% {
+    left: -35%;
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+    left: 120%;
+    opacity: 0;
+  }
+}
+
+@keyframes introSparkle {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  60% {
+    transform: scale(0.7);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+}
+
+@keyframes introWheelSpin {
+  0% {
+    transform: rotate(0deg) scale(0.96);
+  }
+
+  100% {
+    transform: rotate(360deg) scale(0.96);
+  }
+}
+
+@keyframes introWheelPulse {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.65;
+  }
+
+  50% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(0.96);
+    opacity: 0.65;
+  }
+}
