@@ -239,41 +239,10 @@ export default function App() {
           `Failed to fetch connected participants: ${error?.message || "Unknown error"}`
         );
       }
-
-      try {
-        unsubscribeParticipants = await subscribeToParticipants((updated) => {
-          console.log("RAW participant update:", updated);
-          setParticipantDebug(JSON.stringify(updated, null, 2));
-
-          let participantsArray = [];
-
-          if (Array.isArray(updated)) {
-            participantsArray = updated;
-          } else if (Array.isArray(updated?.participants)) {
-            participantsArray = updated.participants;
-          } else if (Array.isArray(updated?.connected_participants)) {
-            participantsArray = updated.connected_participants;
-          }
-
-          console.log("Parsed participant update:", participantsArray);
-          setDiscordParticipants(participantsArray);
-        });
-      } catch (error) {
-        console.error("Failed to subscribe to participant updates:", error);
-        setParticipantDebug(`SUBSCRIBE ERROR: ${error?.message || "Unknown error"}`);
-        setDebugMessage(
-          `Failed to subscribe to participant updates: ${error?.message || "Unknown error"}`
-        );
-      }
     }
 
     loadParticipants();
 
-    return () => {
-      if (unsubscribeParticipants) {
-        unsubscribeParticipants();
-      }
-    };
   }, [sdkReady]);
 
   useEffect(() => {
