@@ -1088,6 +1088,7 @@ export default function App() {
           <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
           <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
           <div><strong>discord participants</strong> — {discordParticipants.length}</div>
+          <div><strong>local user id</strong> — {localUserId}</div>
           <div>
             <strong>participant names</strong> —{" "}
             {discordParticipants.length > 0
