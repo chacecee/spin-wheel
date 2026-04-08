@@ -275,8 +275,6 @@ export default function App() {
     if (isBrowserMode) return;
     if (!discordAuthUser) return;
 
-    let unsubscribeParticipants;
-
     async function loadParticipants() {
       try {
         const result = await getConnectedParticipants();
@@ -307,7 +305,7 @@ export default function App() {
 
     loadParticipants();
 
-  }, [sdkReady]);
+  }, [sdkReady, isBrowserMode, discordAuthUser]);
 
   useEffect(() => {
     if (!roomRef) return;
