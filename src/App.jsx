@@ -58,6 +58,7 @@ function normalizeDegrees(value) {
 export default function App() {
   const [roomData, setRoomData] = useState(null);
   const [debugMessage, setDebugMessage] = useState("Starting connection...");
+  const [discordInstanceId, setDiscordInstanceId] = useState(null);
   const [draftMode, setDraftMode] = useState("custom");
   const [draftEntries, setDraftEntries] = useState([]);
   const [selectedHostId, setSelectedHostId] = useState("");
@@ -70,7 +71,10 @@ export default function App() {
   const spinFadeIntervalRef = useRef(null);
   const spinStopTimeoutRef = useRef(null);
 
-  const roomRef = useMemo(() => doc(db, "sessions", "demo-room"), []);
+  const roomRef = useMemo(() => {
+    if (!discordInstanceId) return null;
+    return doc(db, "sessions", discordInstanceId);
+  }, [discordInstanceId]);
 
   const localUserId = useMemo(() => {
     let savedId = localStorage.getItem("discordWheelUserId");
@@ -100,13 +104,22 @@ export default function App() {
       .then(() => {
         console.log("Discord SDK ready");
         console.log("Discord instance ID:", discordSdk.instanceId);
+
+        if (discordSdk.instanceId) {
+          setDiscordInstanceId(discordSdk.instanceId);
+        } else {
+          setDebugMessage("Discord SDK connected, but no instance ID was found.");
+        }
       })
       .catch((error) => {
         console.error("Discord SDK failed to initialize:", error);
+        setDebugMessage("This app must be launched from inside Discord Activity.");
       });
   }, []);
 
   useEffect(() => {
+    if (!roomRef) return;
+
     const unsubscribe = onSnapshot(
       roomRef,
       (snapshot) => {
@@ -114,7 +127,7 @@ export default function App() {
           setRoomData(snapshot.data());
           setDebugMessage("Room loaded successfully.");
         } else {
-          setDebugMessage("Room document does not exist.");
+          setDebugMessage("Room document does not exist yet.");
         }
       },
       (error) => {
@@ -127,6 +140,8 @@ export default function App() {
   }, [roomRef]);
 
   useEffect(() => {
+    if (!roomRef) return;
+
     async function registerParticipant() {
       try {
         await setDoc(
@@ -149,6 +164,8 @@ export default function App() {
   }, [roomRef, localUserId, localDisplayName]);
 
   useEffect(() => {
+    if (!roomRef) return;
+
     async function autoAssignFirstHost() {
       if (!roomData) return;
 
