@@ -246,6 +246,39 @@ export default function App() {
   ]);
 
   useEffect(() => {
+    if (!roomRef) return;
+    if (!roomData) return;
+    if (!isHost) return;
+    if (phase !== "spinning") return;
+
+    const spinStartedAt = roomData.spinStartedAt || Date.now();
+    const spinDurationMs = roomData.spinDurationMs || 5000;
+    const elapsed = Date.now() - spinStartedAt;
+    const remaining = Math.max(spinDurationMs - elapsed, 0);
+
+    const timeout = setTimeout(async () => {
+      try {
+        await updateDoc(roomRef, {
+          phase: "result",
+          status: "done",
+        });
+      } catch (error) {
+        console.error("Failed to finish spin:", error);
+        setDebugMessage(`Failed to finish spin: ${error.message}`);
+      }
+    }, remaining);
+
+    return () => clearTimeout(timeout);
+  }, [
+    roomRef,
+    roomData,
+    isHost,
+    phase,
+    roomData?.spinStartedAt,
+    roomData?.spinDurationMs,
+  ]);
+
+  useEffect(() => {
     if (!roomData) return;
 
     if (phase === "ready" || phase === "result") {
@@ -531,13 +564,13 @@ export default function App() {
   }
 
   async function handleSpin() {
-    if (!isHost) {
-      setDebugMessage("Only the host can spin the wheel.");
+    if (!roomRef) {
+      setDebugMessage("Room is not ready yet.");
       return;
     }
 
-    if (currentEntries.length < 2) {
-      setDebugMessage("You need at least 2 entries to spin.");
+    if (!isHost) {
+      setDebugMessage("Only the host can spin the wheel.");
       return;
     }
 
@@ -572,16 +605,7 @@ export default function App() {
       setDebugMessage(`Failed to spin: ${error.message}`);
     }
 
-    setTimeout(async () => {
-      try {
-        await updateDoc(roomRef, {
-          phase: "result",
-          status: "done",
-        });
-      } catch (error) {
-        console.error("Failed to finish spin:", error);
-      }
-    }, spinDurationMs);
+
   }
 
   async function handleKeepSpinning() {
