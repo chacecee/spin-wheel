@@ -76,6 +76,7 @@ export default function App() {
   const [discordParticipants, setDiscordParticipants] = useState([]);
   const [sdkReady, setSdkReady] = useState(false);
   const [isBrowserMode, setIsBrowserMode] = useState(false);
+  const [participantDebug, setParticipantDebug] = useState("not fetched yet");
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -215,16 +216,25 @@ export default function App() {
     async function loadParticipants() {
       try {
         const result = await getConnectedParticipants();
-        const participantsArray = Array.isArray(result?.participants)
-          ? result.participants
-          : Array.isArray(result)
-            ? result
-            : [];
 
-        console.log("Initial connected participants:", participantsArray);
+        console.log("RAW getConnectedParticipants result:", result);
+        setParticipantDebug(JSON.stringify(result, null, 2));
+
+        let participantsArray = [];
+
+        if (Array.isArray(result)) {
+          participantsArray = result;
+        } else if (Array.isArray(result?.participants)) {
+          participantsArray = result.participants;
+        } else if (Array.isArray(result?.connected_participants)) {
+          participantsArray = result.connected_participants;
+        }
+
+        console.log("Parsed connected participants:", participantsArray);
         setDiscordParticipants(participantsArray);
       } catch (error) {
         console.error("Failed to fetch connected participants:", error);
+        setParticipantDebug(`FETCH ERROR: ${error?.message || "Unknown error"}`);
         setDebugMessage(
           `Failed to fetch connected participants: ${error?.message || "Unknown error"}`
         );
@@ -232,17 +242,25 @@ export default function App() {
 
       try {
         unsubscribeParticipants = await subscribeToParticipants((updated) => {
-          const participantsArray = Array.isArray(updated?.participants)
-            ? updated.participants
-            : Array.isArray(updated)
-              ? updated
-              : [];
+          console.log("RAW participant update:", updated);
+          setParticipantDebug(JSON.stringify(updated, null, 2));
 
-          console.log("Participant update:", participantsArray);
+          let participantsArray = [];
+
+          if (Array.isArray(updated)) {
+            participantsArray = updated;
+          } else if (Array.isArray(updated?.participants)) {
+            participantsArray = updated.participants;
+          } else if (Array.isArray(updated?.connected_participants)) {
+            participantsArray = updated.connected_participants;
+          }
+
+          console.log("Parsed participant update:", participantsArray);
           setDiscordParticipants(participantsArray);
         });
       } catch (error) {
         console.error("Failed to subscribe to participant updates:", error);
+        setParticipantDebug(`SUBSCRIBE ERROR: ${error?.message || "Unknown error"}`);
         setDebugMessage(
           `Failed to subscribe to participant updates: ${error?.message || "Unknown error"}`
         );
@@ -1110,6 +1128,22 @@ export default function App() {
               : "none"}
           </div>
           <div><strong>debug</strong> — {debugMessage}</div>
+
+          <div>
+            <strong>participant raw</strong> —
+            <pre
+              style={{
+                whiteSpace: "pre-wrap",
+                margin: "6px 0 0",
+                background: "rgba(255,255,255,0.04)",
+                padding: "8px",
+                borderRadius: "4px",
+                overflowX: "auto",
+              }}
+            >
+              {participantDebug}
+            </pre>
+          </div>
         </div>
 
 
