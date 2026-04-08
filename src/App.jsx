@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
-import { db } from "./firebase";
-import { doc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
@@ -94,7 +92,7 @@ export default function App() {
 
   const roomRef = useMemo(() => {
     if (!discordInstanceId) return null;
-    return doc(db, "sessions", discordInstanceId);
+    return discordInstanceId;
   }, [discordInstanceId]);
 
   const localUserId = discordAuthUser?.id || null;
@@ -104,6 +102,64 @@ export default function App() {
     discordAuthUser?.username ||
     "Player";
 
+  async function fetchRoomFromApi(instanceId) {
+    const response = await fetch(
+      `/api/room-get?instanceId=${encodeURIComponent(instanceId)}`
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || data?.details || "Failed to fetch room");
+    }
+
+    return data;
+  }
+
+  async function createOrJoinRoomViaApi(instanceId, participantId, participantName) {
+    const response = await fetch("/api/room-create-or-join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        instanceId,
+        participantId,
+        participantName,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error || data?.details || "Failed to create or join room"
+      );
+    }
+
+    return data;
+  }
+
+  async function updateRoomViaApi(instanceId, patch) {
+    const response = await fetch("/api/room-update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        instanceId,
+        patch,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error || data?.details || "Failed to update room");
+    }
+
+    return data;
+  }
 
   useEffect(() => {
     async function initDiscord() {
@@ -188,23 +244,37 @@ export default function App() {
   useEffect(() => {
     if (!roomRef) return;
 
-    const unsubscribe = onSnapshot(
-      roomRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          setRoomData(snapshot.data());
+    let cancelled = false;
+
+    async function loadRoom() {
+      try {
+        const data = await fetchRoomFromApi(roomRef);
+
+        if (cancelled) return;
+
+        if (data?.room) {
+          setRoomData(data.room);
           setDebugMessage("Room loaded successfully.");
         } else {
+          setRoomData(null);
           setDebugMessage("Room document does not exist yet.");
         }
-      },
-      (error) => {
-        console.error("Firestore error:", error);
-        setDebugMessage(`Firestore error: ${error.message}`);
+      } catch (error) {
+        console.error("Room poll failed:", error);
+        if (!cancelled) {
+          setDebugMessage(`Room poll failed: ${error?.message || "Unknown error"}`);
+        }
       }
-    );
+    }
 
-    return () => unsubscribe();
+    loadRoom();
+
+    const interval = setInterval(loadRoom, 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, [roomRef]);
 
 
@@ -311,74 +381,48 @@ export default function App() {
     if (!roomRef) return;
     if (!discordAuthUser?.id) return;
 
-    const participantName =
-      discordAuthUser.global_name ||
-      discordAuthUser.username ||
-      "Player";
+    let cancelled = false;
 
-    const participantId = discordAuthUser.id;
+    async function createOrJoinRoom() {
+      try {
+        const participantName =
+          discordAuthUser.global_name ||
+          discordAuthUser.username ||
+          "Player";
 
-    // Case 1 — room already exists locally or from server
-    if (roomData?.hostId) {
-      setDoc(
-        roomRef,
-        {
-          participants: {
-            [participantId]: {
-              name: participantName,
-            },
-          },
-        },
-        { merge: true }
-      )
-        .then(() => {
-          setDebugMessage("Participant added to existing room.");
-        })
-        .catch((error) => {
-          console.error("Failed to merge participant:", error);
+        const result = await createOrJoinRoomViaApi(
+          roomRef,
+          discordAuthUser.id,
+          participantName
+        );
+
+        if (cancelled) return;
+
+        if (result?.room) {
+          setRoomData(result.room);
+        }
+
+        if (result?.created) {
+          setDebugMessage("Room created and host assigned.");
+        } else {
+          setDebugMessage("Joined existing room.");
+        }
+      } catch (error) {
+        console.error("Create/join room failed:", error);
+        if (!cancelled) {
           setDebugMessage(
-            `Failed to merge participant: ${error?.code ? `${error.code} — ` : ""}${error?.message || "Unknown error"}`
+            `Create/join room failed: ${error?.message || "Unknown error"}`
           );
-        });
-
-      return;
+        }
+      }
     }
 
-    // Case 2 — no room yet, and this client is alone in the Discord instance
-    if (discordParticipants.length === 1) {
-      setDoc(
-        roomRef,
-        {
-          hostId: participantId,
-          phase: "editing",
-          mode: "custom",
-          entries: ["", "", ""],
-          status: "idle",
-          winnerIndex: null,
-          participants: {
-            [participantId]: {
-              name: participantName,
-            },
-          },
-        },
-        { merge: true }
-      )
-        .then(() => {
-          setDebugMessage("Creating room locally...");
-        })
-        .catch((error) => {
-          console.error("Failed to create room:", error);
-          setDebugMessage(
-            `Failed to create room: ${error?.code ? `${error.code} — ` : ""}${error?.message || "Unknown error"}`
-          );
-        });
+    createOrJoinRoom();
 
-      return;
-    }
-
-    // Case 3 — another participant exists, so wait for the host room to appear
-    setDebugMessage("Waiting for host room to appear...");
-  }, [roomRef, discordAuthUser, roomData?.hostId, discordParticipants.length]);
+    return () => {
+      cancelled = true;
+    };
+  }, [roomRef, discordAuthUser]);
 
   const participantsMap = roomData?.participants || {};
 
@@ -451,10 +495,14 @@ export default function App() {
 
     const timeout = setTimeout(async () => {
       try {
-        await updateDoc(roomRef, {
+        const result = await updateRoomViaApi(roomRef, {
           phase: "result",
           status: "done",
         });
+
+        if (result?.room) {
+          setRoomData(result.room);
+        }
       } catch (error) {
         console.error("Failed to finish spin:", error);
         setDebugMessage(`Failed to finish spin: ${error.message}`);
@@ -700,13 +748,17 @@ export default function App() {
     }
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         mode: draftMode,
         entries: cleanedEntries,
         phase: "ready",
         status: "idle",
         winnerIndex: null,
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setDebugMessage("Setup saved.");
     } catch (error) {
@@ -719,12 +771,16 @@ export default function App() {
     if (!isHost) return;
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         phase: "editing",
         winnerIndex: null,
         mode: "custom",
         entries: ["", "", ""],
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setDebugMessage("Returned to edit mode.");
     } catch (error) {
@@ -745,9 +801,13 @@ export default function App() {
     }
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         hostId: selectedHostId,
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setDebugMessage("Host transferred successfully.");
     } catch (error) {
@@ -788,7 +848,7 @@ export default function App() {
     const spinDurationMs = 5000;
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         phase: "spinning",
         status: "spinning",
         winnerIndex: nextWinnerIndex,
@@ -796,6 +856,10 @@ export default function App() {
         spinDurationMs,
         resultRotation: nextRotation,
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setDebugMessage("Spin started.");
     } catch (error) {
@@ -822,24 +886,32 @@ export default function App() {
     if (updatedEntries.length < 2) {
       setDebugMessage("Not enough entries left. Returning to edit mode.");
 
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         entries: updatedEntries,
         phase: "editing",
         status: "idle",
         winnerIndex: null,
       });
 
+      if (result?.room) {
+        setRoomData(result.room);
+      }
+
       setRemoveWinnerNextSpin(false);
       return;
     }
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         entries: updatedEntries,
         phase: "ready",
         status: "idle",
         winnerIndex: null,
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setRemoveWinnerNextSpin(false);
       setDebugMessage("Ready for another spin.");
@@ -867,12 +939,16 @@ export default function App() {
     }
 
     try {
-      await updateDoc(roomRef, {
+      const result = await updateRoomViaApi(roomRef, {
         entries: nextEntries,
         phase: "editing",
         status: "idle",
         winnerIndex: null,
       });
+
+      if (result?.room) {
+        setRoomData(result.room);
+      }
 
       setRemoveWinnerNextSpin(false);
       setDebugMessage("Returned to edit mode.");
