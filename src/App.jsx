@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { db } from "./firebase";
-import { doc, onSnapshot, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, setDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
@@ -311,71 +311,74 @@ export default function App() {
     if (!roomRef) return;
     if (!discordAuthUser?.id) return;
 
-    async function registerParticipantAndHost() {
-      try {
-        const participantName =
-          discordAuthUser.global_name ||
-          discordAuthUser.username ||
-          "Player";
+    const participantName =
+      discordAuthUser.global_name ||
+      discordAuthUser.username ||
+      "Player";
 
-        console.log("Registering participant without transaction", {
-          roomId: discordInstanceId,
-          localUserId: discordAuthUser.id,
-          localDisplayName: participantName,
-        });
+    const participantId = discordAuthUser.id;
 
-        const snapshot = await getDoc(roomRef);
-
-        if (!snapshot.exists()) {
-          await setDoc(roomRef, {
-            hostId: discordAuthUser.id,
-            phase: "editing",
-            mode: "custom",
-            entries: ["", "", ""],
-            status: "idle",
-            winnerIndex: null,
-            participants: {
-              [discordAuthUser.id]: {
-                name: participantName,
-              },
-            },
-          });
-
-          console.log("Room created and host assigned");
-          setDebugMessage("Room created and host assigned.");
-          return;
-        }
-
-        await setDoc(
-          roomRef,
-          {
-            participants: {
-              [discordAuthUser.id]: {
-                name: participantName,
-              },
+    // Case 1 — room already exists locally or from server
+    if (roomData?.hostId) {
+      setDoc(
+        roomRef,
+        {
+          participants: {
+            [participantId]: {
+              name: participantName,
             },
           },
-          { merge: true }
-        );
-
-        console.log("Participant merged into existing room");
-        setDebugMessage("Participant added to existing room.");
-      } catch (error) {
-        console.error("Failed to register participant/host:", {
-          code: error?.code,
-          message: error?.message,
-          full: error,
+        },
+        { merge: true }
+      )
+        .then(() => {
+          setDebugMessage("Participant added to existing room.");
+        })
+        .catch((error) => {
+          console.error("Failed to merge participant:", error);
+          setDebugMessage(
+            `Failed to merge participant: ${error?.code ? `${error.code} — ` : ""}${error?.message || "Unknown error"}`
+          );
         });
 
-        setDebugMessage(
-          `Failed to register participant/host: ${error?.code ? `${error.code} — ` : ""
-          }${error?.message || "Unknown error"}`
-        );
-      }
+      return;
     }
 
-    registerParticipantAndHost();
-  }, [roomRef, discordInstanceId, discordAuthUser]);
+    // Case 2 — no room yet, and this client is alone in the Discord instance
+    if (discordParticipants.length === 1) {
+      setDoc(
+        roomRef,
+        {
+          hostId: participantId,
+          phase: "editing",
+          mode: "custom",
+          entries: ["", "", ""],
+          status: "idle",
+          winnerIndex: null,
+          participants: {
+            [participantId]: {
+              name: participantName,
+            },
+          },
+        },
+        { merge: true }
+      )
+        .then(() => {
+          setDebugMessage("Creating room locally...");
+        })
+        .catch((error) => {
+          console.error("Failed to create room:", error);
+          setDebugMessage(
+            `Failed to create room: ${error?.code ? `${error.code} — ` : ""}${error?.message || "Unknown error"}`
+          );
+        });
+
+      return;
+    }
+
+    // Case 3 — another participant exists, so wait for the host room to appear
+    setDebugMessage("Waiting for host room to appear...");
+  }, [roomRef, discordAuthUser, roomData?.hostId, discordParticipants.length]);
 
   const participantsMap = roomData?.participants || {};
 
