@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { db } from "./firebase";
-import { doc, onSnapshot, updateDoc, runTransaction } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
@@ -313,53 +313,53 @@ export default function App() {
 
     async function registerParticipantAndHost() {
       try {
-        console.log("Registering participant with transaction", {
+        const participantName =
+          discordAuthUser.global_name ||
+          discordAuthUser.username ||
+          "Player";
+
+        console.log("Registering participant without transaction", {
           roomId: discordInstanceId,
           localUserId: discordAuthUser.id,
-          localDisplayName:
-            discordAuthUser.global_name ||
-            discordAuthUser.username ||
-            "Player",
+          localDisplayName: participantName,
         });
 
-        await runTransaction(db, async (transaction) => {
-          const snapshot = await transaction.get(roomRef);
-          const existing = snapshot.exists() ? snapshot.data() : {};
+        const snapshot = await getDoc(roomRef);
 
-          const existingParticipants = existing?.participants || {};
-          const alreadyHasHost = !!existing?.hostId;
-
-          const nextParticipants = {
-            ...existingParticipants,
-            [discordAuthUser.id]: {
-              name:
-                discordAuthUser.global_name ||
-                discordAuthUser.username ||
-                "Player",
+        if (!snapshot.exists()) {
+          await setDoc(roomRef, {
+            hostId: discordAuthUser.id,
+            phase: "editing",
+            mode: "custom",
+            entries: ["", "", ""],
+            status: "idle",
+            winnerIndex: null,
+            participants: {
+              [discordAuthUser.id]: {
+                name: participantName,
+              },
             },
-          };
+          });
 
-          const nextData = {
-            participants: nextParticipants,
-          };
+          console.log("Room created and host assigned");
+          setDebugMessage("Room created and host assigned.");
+          return;
+        }
 
-          if (!alreadyHasHost) {
-            nextData.hostId = discordAuthUser.id;
-            nextData.phase = existing?.phase || "editing";
-            nextData.mode = existing?.mode || "custom";
-            nextData.entries = existing?.entries || ["", "", ""];
-            nextData.status = existing?.status || "idle";
-            nextData.winnerIndex =
-              typeof existing?.winnerIndex === "number"
-                ? existing.winnerIndex
-                : null;
-          }
+        await setDoc(
+          roomRef,
+          {
+            participants: {
+              [discordAuthUser.id]: {
+                name: participantName,
+              },
+            },
+          },
+          { merge: true }
+        );
 
-          transaction.set(roomRef, nextData, { merge: true });
-        });
-
-        console.log("Participant/host transaction complete");
-        setDebugMessage("Participant/host registration complete.");
+        console.log("Participant merged into existing room");
+        setDebugMessage("Participant added to existing room.");
       } catch (error) {
         console.error("Failed to register participant/host:", {
           code: error?.code,
