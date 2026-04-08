@@ -13,19 +13,7 @@ export function getDiscordSdk() {
   }
 
   if (!discordSdkInstance) {
-    console.log(
-      "Creating Discord SDK with client ID:",
-      import.meta.env.VITE_DISCORD_CLIENT_ID
-    );
-
-    discordSdkInstance = new DiscordSDK(
-      import.meta.env.VITE_DISCORD_CLIENT_ID
-    );
-
-    console.log(
-      "Discord SDK constructed. Immediate instanceId:",
-      discordSdkInstance.instanceId
-    );
+    discordSdkInstance = new DiscordSDK(import.meta.env.VITE_DISCORD_CLIENT_ID);
   }
 
   return discordSdkInstance;
@@ -38,11 +26,38 @@ export async function setupDiscordSdk() {
     throw new Error("Not running inside Discord Activity");
   }
 
-  console.log("Waiting for discordSdk.ready()...");
   await sdk.ready();
-  console.log("discordSdk.ready() resolved");
-
   return sdk;
+}
+
+export async function authorizeDiscordUser() {
+  const sdk = getDiscordSdk();
+
+  if (!sdk) {
+    throw new Error("Not running inside Discord Activity");
+  }
+
+  const result = await sdk.commands.authorize({
+    client_id: import.meta.env.VITE_DISCORD_CLIENT_ID,
+    response_type: "code",
+    state: "",
+    prompt: "none",
+    scope: ["identify", "guilds"],
+  });
+
+  return result;
+}
+
+export async function authenticateDiscordUser(accessToken) {
+  const sdk = getDiscordSdk();
+
+  if (!sdk) {
+    throw new Error("Not running inside Discord Activity");
+  }
+
+  return await sdk.commands.authenticate({
+    access_token: accessToken,
+  });
 }
 
 export async function getConnectedParticipants() {
@@ -52,10 +67,7 @@ export async function getConnectedParticipants() {
     return [];
   }
 
-  console.log("Calling getInstanceConnectedParticipants...");
-  const result = await sdk.commands.getInstanceConnectedParticipants();
-  console.log("getInstanceConnectedParticipants result:", result);
-  return result;
+  return await sdk.commands.getInstanceConnectedParticipants();
 }
 
 export async function subscribeToParticipants(callback) {
@@ -65,16 +77,12 @@ export async function subscribeToParticipants(callback) {
     return () => {};
   }
 
-  console.log("Subscribing to ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE...");
-
   await sdk.subscribe(
     Events.ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE,
     callback
   );
 
   return async () => {
-    console.log("Unsubscribing from ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE...");
-
     await sdk.unsubscribe(
       Events.ACTIVITY_INSTANCE_PARTICIPANTS_UPDATE,
       callback

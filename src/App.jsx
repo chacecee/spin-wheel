@@ -5,10 +5,10 @@ import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
-  getDiscordSdk,
   getConnectedParticipants,
-  subscribeToParticipants,
   isDiscordEmbedded,
+  authorizeDiscordUser,
+  authenticateDiscordUser,
 } from "./discordSdk";
 
 function polarToCartesian(cx, cy, r, angleInDegrees) {
@@ -77,6 +77,9 @@ export default function App() {
   const [sdkReady, setSdkReady] = useState(false);
   const [isBrowserMode, setIsBrowserMode] = useState(false);
   const [participantDebug, setParticipantDebug] = useState("not fetched yet");
+
+  const [authDebug, setAuthDebug] = useState("not started");
+  const [discordAuthUser, setDiscordAuthUser] = useState(null);
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -208,8 +211,69 @@ export default function App() {
     return () => unsubscribe();
   }, [roomRef]);
 
+
   useEffect(() => {
     if (!sdkReady) return;
+    if (isBrowserMode) return;
+
+    async function runDiscordAuth() {
+      try {
+        setAuthDebug("Starting authorize...");
+
+        const authResult = await authorizeDiscordUser();
+        const code = authResult?.code;
+
+        if (!code) {
+          throw new Error("No authorization code returned");
+        }
+
+        setAuthDebug("Authorization code received. Exchanging token...");
+
+        const tokenResponse = await fetch("/api/discord-token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ code }),
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+          throw new Error(
+            tokenData?.error_description ||
+            tokenData?.error ||
+            "Token exchange failed"
+          );
+        }
+
+        const accessToken = tokenData?.access_token;
+
+        if (!accessToken) {
+          throw new Error("No access token returned");
+        }
+
+        setAuthDebug("Access token received. Authenticating user...");
+
+        const authUser = await authenticateDiscordUser(accessToken);
+
+        setDiscordAuthUser(authUser?.user || null);
+        setAuthDebug(
+          `Authenticated as ${authUser?.user?.username || authUser?.user?.global_name || "unknown user"}`
+        );
+      } catch (error) {
+        console.error("Discord auth failed:", error);
+        setAuthDebug(`AUTH ERROR: ${error?.message || "Unknown error"}`);
+      }
+    }
+
+    runDiscordAuth();
+  }, [sdkReady, isBrowserMode]);
+
+  useEffect(() => {
+    if (!sdkReady) return;
+    if (isBrowserMode) return;
+    if (!discordAuthUser) return;
 
     let unsubscribeParticipants;
 
@@ -1097,6 +1161,9 @@ export default function App() {
               : "none"}
           </div>
           <div><strong>debug</strong> — {debugMessage}</div>
+
+          <div><strong>auth debug</strong> — {authDebug}</div>
+          <div><strong>authed user</strong> — {discordAuthUser?.username || discordAuthUser?.global_name || "none"}</div>
 
           <div>
             <strong>participant raw</strong> —
