@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { db } from "./firebase";
-import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, runTransaction } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
@@ -318,64 +318,65 @@ export default function App() {
 
   }, [sdkReady, isBrowserMode, discordAuthUser]);
 
-  useEffect(() => {
-    if (!roomRef) return;
+useEffect(() => {
+  if (!roomRef) return;
 
-    async function registerParticipant() {
-      try {
-        console.log("Registering Firestore participant", {
-          roomId: discordInstanceId,
-          localUserId,
-          localDisplayName,
-        });
+  async function registerParticipantAndHost() {
+    try {
+      console.log("Registering participant with transaction", {
+        roomId: discordInstanceId,
+        localUserId,
+        localDisplayName,
+      });
 
-        await setDoc(
-          roomRef,
-          {
-            participants: {
-              [localUserId]: {
-                name: localDisplayName,
-              },
-            },
+      await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(roomRef);
+        const existing = snapshot.exists() ? snapshot.data() : {};
+
+        const existingParticipants = existing?.participants || {};
+        const alreadyHasHost = !!existing?.hostId;
+
+        const nextParticipants = {
+          ...existingParticipants,
+          [localUserId]: {
+            name:
+              discordAuthUser?.global_name ||
+              discordAuthUser?.username ||
+              localDisplayName,
           },
-          { merge: true }
-        );
+        };
 
-        console.log("Participant registration complete");
-      } catch (error) {
-        console.error("Failed to register participant:", error);
-        setDebugMessage(
-          `Failed to register participant: ${error?.message || "Unknown error"}`
-        );
-      }
-    }
+        const nextData = {
+          participants: nextParticipants,
+        };
 
-    registerParticipant();
-  }, [roomRef, localUserId, localDisplayName, discordInstanceId]);
-
-  useEffect(() => {
-    if (!roomRef) return;
-
-    async function autoAssignFirstHost() {
-      if (!roomData) return;
-
-      const currentHostId = roomData.hostId || "none";
-
-      if (currentHostId === "none" || currentHostId === "") {
-        try {
-          await updateDoc(roomRef, {
-            hostId: localUserId,
-            phase: roomData.phase || "editing",
-            mode: roomData.mode || "custom",
-          });
-        } catch (error) {
-          console.error("Failed to auto-assign host:", error);
+        if (!alreadyHasHost) {
+          nextData.hostId = localUserId;
+          nextData.phase = existing?.phase || "editing";
+          nextData.mode = existing?.mode || "custom";
+          nextData.entries = existing?.entries || ["", "", ""];
+          nextData.status = existing?.status || "idle";
+          nextData.winnerIndex =
+            typeof existing?.winnerIndex === "number"
+              ? existing.winnerIndex
+              : null;
         }
-      }
-    }
 
-    autoAssignFirstHost();
-  }, [roomData, roomRef, localUserId]);
+        transaction.set(roomRef, nextData, { merge: true });
+      });
+
+      console.log("Participant/host transaction complete");
+    } catch (error) {
+      console.error("Failed to register participant/host:", error);
+      setDebugMessage(
+        `Failed to register participant/host: ${error?.message || "Unknown error"}`
+      );
+    }
+  }
+
+  registerParticipantAndHost();
+}, [roomRef, discordInstanceId, localUserId, localDisplayName, discordAuthUser]);
+
 
   const participantsMap = roomData?.participants || {};
 
