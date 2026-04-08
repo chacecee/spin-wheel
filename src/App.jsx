@@ -5,9 +5,10 @@ import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
 import {
   setupDiscordSdk,
-  discordSdk,
+  getDiscordSdk,
   getConnectedParticipants,
   subscribeToParticipants,
+  isDiscordEmbedded,
 } from "./discordSdk";
 
 function polarToCartesian(cx, cy, r, angleInDegrees) {
@@ -74,6 +75,7 @@ export default function App() {
 
   const [discordParticipants, setDiscordParticipants] = useState([]);
   const [sdkReady, setSdkReady] = useState(false);
+  const [isBrowserMode, setIsBrowserMode] = useState(false);
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -113,16 +115,25 @@ export default function App() {
   useEffect(() => {
     async function initDiscord() {
       try {
-        await setupDiscordSdk();
+        if (!isDiscordEmbedded()) {
+          setIsBrowserMode(true);
+          setSdkReady(false);
+          setDebugMessage("Browser mode detected. Discord SDK not started.");
+          setDiscordInstanceId("browser-preview");
+          return;
+        }
+
+        const sdk = await setupDiscordSdk();
 
         console.log("Discord SDK ready");
-        console.log("Discord instance ID:", discordSdk.instanceId);
+        console.log("Discord instance ID:", sdk.instanceId);
 
         setSdkReady(true);
+        setIsBrowserMode(false);
 
-        if (discordSdk.instanceId) {
-          setDiscordInstanceId(discordSdk.instanceId);
-          setDebugMessage(`SDK ready. Instance ID: ${discordSdk.instanceId}`);
+        if (sdk.instanceId) {
+          setDiscordInstanceId(sdk.instanceId);
+          setDebugMessage(`SDK ready. Instance ID: ${sdk.instanceId}`);
         } else {
           setDebugMessage("Discord SDK connected, but no instance ID was found.");
         }
@@ -1087,6 +1098,7 @@ export default function App() {
         >
           <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
           <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
+          <div><strong>browser mode</strong> — {isBrowserMode ? "yes" : "no"}</div>
           <div><strong>discord participants</strong> — {discordParticipants.length}</div>
           <div><strong>local user id</strong> — {localUserId}</div>
           <div>
