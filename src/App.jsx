@@ -3,7 +3,12 @@ import "./App.css";
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
-import { setupDiscordSdk, discordSdk } from "./discordSdk";
+import {
+  setupDiscordSdk,
+  discordSdk,
+  getConnectedParticipants,
+  subscribeToParticipants,
+} from "./discordSdk";
 
 function polarToCartesian(cx, cy, r, angleInDegrees) {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
@@ -67,6 +72,9 @@ export default function App() {
   const [removeWinnerNextSpin, setRemoveWinnerNextSpin] = useState(false);
   const [displayRotation, setDisplayRotation] = useState(0);
 
+  const [discordParticipants, setDiscordParticipants] = useState([]);
+  const [sdkReady, setSdkReady] = useState(false);
+
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
   const introAudioRef = useRef(null);
@@ -103,21 +111,30 @@ export default function App() {
 
 
   useEffect(() => {
-    setupDiscordSdk()
-      .then(() => {
+    async function initDiscord() {
+      try {
+        await setupDiscordSdk();
+
         console.log("Discord SDK ready");
         console.log("Discord instance ID:", discordSdk.instanceId);
 
+        setSdkReady(true);
+
         if (discordSdk.instanceId) {
           setDiscordInstanceId(discordSdk.instanceId);
+          setDebugMessage(`SDK ready. Instance ID: ${discordSdk.instanceId}`);
         } else {
           setDebugMessage("Discord SDK connected, but no instance ID was found.");
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Discord SDK failed to initialize:", error);
-        setDebugMessage("This app must be launched from inside Discord Activity.");
-      });
+        setDebugMessage(
+          `Discord SDK failed to initialize: ${error?.message || "Unknown error"}`
+        );
+      }
+    }
+
+    initDiscord();
   }, []);
 
 
@@ -180,10 +197,67 @@ export default function App() {
   }, [roomRef]);
 
   useEffect(() => {
+    if (!sdkReady) return;
+
+    let unsubscribeParticipants;
+
+    async function loadParticipants() {
+      try {
+        const result = await getConnectedParticipants();
+        const participantsArray = Array.isArray(result?.participants)
+          ? result.participants
+          : Array.isArray(result)
+            ? result
+            : [];
+
+        console.log("Initial connected participants:", participantsArray);
+        setDiscordParticipants(participantsArray);
+      } catch (error) {
+        console.error("Failed to fetch connected participants:", error);
+        setDebugMessage(
+          `Failed to fetch connected participants: ${error?.message || "Unknown error"}`
+        );
+      }
+
+      try {
+        unsubscribeParticipants = await subscribeToParticipants((updated) => {
+          const participantsArray = Array.isArray(updated?.participants)
+            ? updated.participants
+            : Array.isArray(updated)
+              ? updated
+              : [];
+
+          console.log("Participant update:", participantsArray);
+          setDiscordParticipants(participantsArray);
+        });
+      } catch (error) {
+        console.error("Failed to subscribe to participant updates:", error);
+        setDebugMessage(
+          `Failed to subscribe to participant updates: ${error?.message || "Unknown error"}`
+        );
+      }
+    }
+
+    loadParticipants();
+
+    return () => {
+      if (unsubscribeParticipants) {
+        unsubscribeParticipants();
+      }
+    };
+  }, [sdkReady]);
+
+  useEffect(() => {
     if (!roomRef) return;
 
     async function registerParticipant() {
       try {
+        console.log("Registering Firestore participant", {
+          roomId: discordInstanceId,
+          localUserId,
+          localDisplayName,
+        });
+
         await setDoc(
           roomRef,
           {
@@ -195,13 +269,18 @@ export default function App() {
           },
           { merge: true }
         );
+
+        console.log("Participant registration complete");
       } catch (error) {
         console.error("Failed to register participant:", error);
+        setDebugMessage(
+          `Failed to register participant: ${error?.message || "Unknown error"}`
+        );
       }
     }
 
     registerParticipant();
-  }, [roomRef, localUserId, localDisplayName]);
+  }, [roomRef, localUserId, localDisplayName, discordInstanceId]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -992,6 +1071,36 @@ export default function App() {
           padding: stageIsWheel ? "18px 18px 12px" : "24px",
         }}
       >
+        <div
+          style={{
+            width: "100%",
+            maxWidth: "960px",
+            marginBottom: "12px",
+            padding: "10px 12px",
+            borderRadius: "6px",
+            background: "rgba(7, 12, 24, 0.92)",
+            border: "1px solid rgba(255,255,255,0.14)",
+            color: "#d1d5db",
+            fontSize: "12px",
+            lineHeight: 1.5,
+          }}
+        >
+          <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
+          <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
+          <div><strong>discord participants</strong> — {discordParticipants.length}</div>
+          <div>
+            <strong>participant names</strong> —{" "}
+            {discordParticipants.length > 0
+              ? discordParticipants
+                .map((p) => p.global_name || p.username || p.id || "unknown")
+                .join(", ")
+              : "none"}
+          </div>
+          <div><strong>debug</strong> — {debugMessage}</div>
+        </div>
+
+
+
         <div
           style={{
             width: "100%",
