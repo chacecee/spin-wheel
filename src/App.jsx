@@ -3,6 +3,7 @@ import "./App.css";
 import { db } from "./firebase";
 import { doc, onSnapshot, setDoc, updateDoc } from "firebase/firestore";
 import confetti from "canvas-confetti";
+import { setupDiscordSdk, discordSdk } from "./discordSdk";
 
 function polarToCartesian(cx, cy, r, angleInDegrees) {
   const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180.0;
@@ -92,6 +93,18 @@ export default function App() {
 
     return savedName;
   }, [localUserId]);
+
+
+  useEffect(() => {
+    setupDiscordSdk()
+      .then(() => {
+        console.log("Discord SDK ready");
+        console.log("Discord instance ID:", discordSdk.instanceId);
+      })
+      .catch((error) => {
+        console.error("Discord SDK failed to initialize:", error);
+      });
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
