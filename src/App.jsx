@@ -1156,10 +1156,9 @@ export default function App() {
 
   const wheelSize = 760;
   const center = wheelSize / 2;
-  const outerRadius = 242;
-  const sliceRadius = 228;
-  const hubRadius = 66;
-  const studRingRadius = 238;
+  const outerRadius = 268;
+  const sliceRadius = 252;
+  const studRingRadius = 262;
   const studCount = 18;
   const sliceAngle = currentEntries.length > 0 ? 360 / currentEntries.length : 360;
 
@@ -1838,14 +1837,8 @@ export default function App() {
                     position: "relative",
                     width:
                       viewportSize.width > viewportSize.height
-                        ? `${Math.max(
-                          Math.min(
-                            viewportSize.height - (isShortLandscape ? 0 : 0),
-                            isShortLandscape ? 520 : 820
-                          ),
-                          isShortLandscape ? 260 : 420
-                        )}px`
-                        : `min(92vw, 620px)`,
+                        ? "min(90vh, 84vw)"
+                        : "min(92vw, 92vh)",
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
