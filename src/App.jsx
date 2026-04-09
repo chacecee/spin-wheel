@@ -1183,7 +1183,8 @@ export default function App() {
         minHeight: "100vh",
         width: "100%",
         position: "relative",
-        overflow: "hidden",
+        overflowX: "hidden",
+        overflowY: "auto",
         background:
           "linear-gradient(180deg, #09111f 0%, #0a1324 35%, #090d15 70%, #05070c 100%)",
       }}
@@ -1410,6 +1411,8 @@ export default function App() {
             : isShortLandscape
               ? "12px"
               : "24px",
+          overflowY: isShortLandscape ? "auto" : "visible",
+          overflowX: "hidden",
         }}
       >
         {DEBUG_UI_ENABLED && (
@@ -1506,6 +1509,7 @@ export default function App() {
                 ? "980px"
                 : "760px",
             position: "relative",
+            overflow: "visible",
           }}
         >
           {(phase === "ready" || phase === "result") && isHost && (
@@ -1538,9 +1542,11 @@ export default function App() {
                 marginBottom: isShortLandscape ? "10px" : "18px",
                 marginTop: "0",
                 letterSpacing: "-0.03em",
+                color: "rgba(255,255,255,0.78)",
+                textShadow: "0 2px 10px rgba(0,0,0,0.18)",
               }}
             >
-              Spin the Wheel
+              Edit your wheel
             </h1>
           )}
 
@@ -1579,14 +1585,16 @@ export default function App() {
                         display: "flex",
                         gap: "8px",
                         alignItems: "stretch",
+                        flexWrap: isShortLandscape ? "wrap" : "nowrap",
                       }}
                     >
                       <select
                         value={selectedHostId}
                         onChange={(e) => setSelectedHostId(e.target.value)}
                         style={{
-                          flex: "0 1 420px",
-                          maxWidth: "420px",
+                          flex: isShortLandscape ? "1 1 320px" : "0 1 420px",
+                          maxWidth: isShortLandscape ? "760px" : "420px",
+                          minWidth: 0,
                           padding: "12px",
                           borderRadius: "5px",
                           border: "1px solid #334155",
@@ -1691,8 +1699,8 @@ export default function App() {
 
                     <div
                       style={{
-                        maxHeight: "198px",
-                        overflowY: "auto",
+                        maxHeight: isShortLandscape ? "none" : "198px",
+                        overflowY: isShortLandscape ? "visible" : "auto",
                         paddingRight: "4px",
                         marginBottom: "12px",
                       }}
@@ -1705,6 +1713,8 @@ export default function App() {
                             gap: "10px",
                             marginBottom: "10px",
                             alignItems: "center",
+                            width: "100%",
+                            maxWidth: isShortLandscape ? "760px" : "100%",
                           }}
                         >
                           <input
@@ -1714,6 +1724,7 @@ export default function App() {
                             onChange={(e) => handleEntryChange(index, e.target.value)}
                             style={{
                               flex: 1,
+                              minWidth: 0,
                               padding: "12px",
                               borderRadius: "5px",
                               border: "1px solid #334155",
@@ -1796,13 +1807,13 @@ export default function App() {
                   style={{
                     position: "relative",
                     width: isShortLandscape
-                      ? "min(92vw, 78vh, 820px)"
+                      ? "min(108vw, 96vh, 980px)"
                       : "min(96vw, 90vh, 1120px)",
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: isShortLandscape ? "0" : "6px",
+                    marginTop: isShortLandscape ? "-8px" : "6px",
                   }}
                 >
                   <div
@@ -1868,16 +1879,27 @@ export default function App() {
                           endAngle
                         );
 
-                        const textRadius = sliceRadius * 0.74;
+                        const textRadius = sliceRadius * 0.58;
                         const textPoint = polarToCartesian(
                           center,
                           center,
                           textRadius,
                           midAngle
                         );
-                        const textRotation = midAngle;
+
+                        const rawRotation = midAngle - 90;
+                        const shouldFlipText = midAngle > 180;
+                        const textRotation = shouldFlipText ? rawRotation + 180 : rawRotation;
+
                         const textColor = getSliceTextColor(index);
                         const fillColor = getSliceFill(index);
+
+                        const label = entry.length > 18 ? entry.slice(0, 18) + "…" : entry;
+
+                        const availableTextWidth = Math.max(
+                          sliceRadius * Math.sin((sliceAngle * Math.PI) / 360) * 1.65,
+                          92
+                        );
 
                         return (
                           <g key={`${entry}-${index}`}>
@@ -1892,19 +1914,23 @@ export default function App() {
                               y={textPoint.y}
                               fill={textColor}
                               fontSize={
-                                currentEntries.length > 10
-                                  ? "12"
-                                  : currentEntries.length > 7
-                                    ? "14"
-                                    : "16"
+                                currentEntries.length <= 4
+                                  ? "28"
+                                  : currentEntries.length <= 6
+                                    ? "23"
+                                    : currentEntries.length <= 8
+                                      ? "18"
+                                      : "15"
                               }
                               fontWeight="700"
-                              letterSpacing="0.2px"
+                              letterSpacing="0.15px"
                               textAnchor="middle"
                               dominantBaseline="middle"
+                              textLength={availableTextWidth}
+                              lengthAdjust="spacingAndGlyphs"
                               transform={`rotate(${textRotation} ${textPoint.x} ${textPoint.y})`}
                             >
-                              {entry.length > 18 ? entry.slice(0, 18) + "…" : entry}
+                              {label}
                             </text>
                           </g>
                         );
@@ -1953,7 +1979,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: "16%",
+                      right: isShortLandscape ? "8.5%" : "16%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
@@ -1969,7 +1995,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: "14%",
+                      right: isShortLandscape ? "6.8%" : "14%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: "22px",
