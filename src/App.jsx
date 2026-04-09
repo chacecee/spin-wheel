@@ -375,17 +375,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!stageIsWheel) return;
-
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-
-    const appRoot = document.querySelector(".app");
-    if (appRoot) {
-      appRoot.scrollTop = 0;
-    }
-  }, [stageIsWheel, phase]);
-
-  useEffect(() => {
     if (!roomRef) return;
     if (isBrowserMode) return;
 
@@ -1153,6 +1142,17 @@ export default function App() {
   const wheelStageHeight = isShortLandscape
     ? `${Math.max(viewportSize.height - 10, 260)}px`
     : `${Math.max(viewportSize.height - 24, 420)}px`;
+
+  useEffect(() => {
+    if (!stageIsWheel) return;
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    const appRoot = document.querySelector(".app");
+    if (appRoot) {
+      appRoot.scrollTop = 0;
+    }
+  }, [stageIsWheel, phase]);
 
   const wheelSize = 760;
   const center = wheelSize / 2;
