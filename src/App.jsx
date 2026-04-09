@@ -1180,11 +1180,13 @@ export default function App() {
     <div
       className="app"
       style={{
-        minHeight: "100vh",
+        height: "100vh",
         width: "100%",
         position: "relative",
         overflowX: "hidden",
         overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        overscrollBehaviorY: "contain",
         background:
           "linear-gradient(180deg, #09111f 0%, #0a1324 35%, #090d15 70%, #05070c 100%)",
       }}
@@ -1398,7 +1400,7 @@ export default function App() {
           position: "relative",
           zIndex: 2,
           width: "100%",
-          minHeight: "100vh",
+          minHeight: "100%",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -1406,13 +1408,13 @@ export default function App() {
             stageIsWheel || isShortLandscape ? "flex-start" : "center",
           padding: stageIsWheel
             ? isShortLandscape
-              ? "10px 12px 10px"
+              ? "10px 12px 24px"
               : "18px 18px 12px"
             : isShortLandscape
-              ? "12px"
+              ? "12px 12px 24px"
               : "24px",
-          overflowY: isShortLandscape ? "auto" : "visible",
-          overflowX: "hidden",
+          overflow: "visible",
+          boxSizing: "border-box",
         }}
       >
         {DEBUG_UI_ENABLED && (
@@ -1563,6 +1565,8 @@ export default function App() {
                   style={{
                     width: "100%",
                     padding: "0",
+                    paddingRight: isShortLandscape ? "120px" : "0",
+                    boxSizing: "border-box",
                   }}
                 >
                   <div
@@ -1586,6 +1590,8 @@ export default function App() {
                         gap: "8px",
                         alignItems: "stretch",
                         flexWrap: isShortLandscape ? "wrap" : "nowrap",
+                        width: "100%",
+                        maxWidth: isShortLandscape ? "calc(100vw - 150px)" : "100%",
                       }}
                     >
                       <select
@@ -1714,7 +1720,7 @@ export default function App() {
                             marginBottom: "10px",
                             alignItems: "center",
                             width: "100%",
-                            maxWidth: isShortLandscape ? "760px" : "100%",
+                            maxWidth: isShortLandscape ? "calc(100vw - 150px)" : "100%",
                           }}
                         >
                           <input
@@ -1807,13 +1813,13 @@ export default function App() {
                   style={{
                     position: "relative",
                     width: isShortLandscape
-                      ? "min(108vw, 96vh, 980px)"
+                      ? "min(140vw, 980px)"
                       : "min(96vw, 90vh, 1120px)",
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: isShortLandscape ? "-8px" : "6px",
+                    marginTop: isShortLandscape ? "-18px" : "6px",
                   }}
                 >
                   <div
@@ -1894,12 +1900,7 @@ export default function App() {
                         const textColor = getSliceTextColor(index);
                         const fillColor = getSliceFill(index);
 
-                        const label = entry.length > 18 ? entry.slice(0, 18) + "…" : entry;
-
-                        const availableTextWidth = Math.max(
-                          sliceRadius * Math.sin((sliceAngle * Math.PI) / 360) * 1.65,
-                          92
-                        );
+                        const label = entry.length > 12 ? entry.slice(0, 12) + "…" : entry;
 
                         return (
                           <g key={`${entry}-${index}`}>
@@ -1913,21 +1914,11 @@ export default function App() {
                               x={textPoint.x}
                               y={textPoint.y}
                               fill={textColor}
-                              fontSize={
-                                currentEntries.length <= 4
-                                  ? "28"
-                                  : currentEntries.length <= 6
-                                    ? "23"
-                                    : currentEntries.length <= 8
-                                      ? "18"
-                                      : "15"
-                              }
+                              fontSize="20"
                               fontWeight="700"
-                              letterSpacing="0.15px"
+                              letterSpacing="0.1px"
                               textAnchor="middle"
                               dominantBaseline="middle"
-                              textLength={availableTextWidth}
-                              lengthAdjust="spacingAndGlyphs"
                               transform={`rotate(${textRotation} ${textPoint.x} ${textPoint.y})`}
                             >
                               {label}
@@ -1979,7 +1970,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "8.5%" : "16%",
+                      right: isShortLandscape ? "1.8%" : "16%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
@@ -1995,7 +1986,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "6.8%" : "14%",
+                      right: isShortLandscape ? "0.1%" : "14%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: "22px",
