@@ -1956,16 +1956,16 @@ export default function App() {
                         const textColor = getSliceTextColor(index);
                         const fillColor = getSliceFill(index);
 
-                        const label = entry.length > 12 ? entry.slice(0, 12) + "…" : entry;
+                        const label = entry.length > 12 ? entry.slice(0, 17) + "…" : entry;
 
                         const sliceFontSize =
-                          label.length <= 4
+                          label.length <= 6
                             ? 42
-                            : label.length <= 6
+                            : label.length <= 8
                               ? 36
-                              : label.length <= 8
+                              : label.length <= 10
                                 ? 30
-                                : label.length <= 10
+                                : label.length <= 12
                                   ? 24
                                   : 20;
 
