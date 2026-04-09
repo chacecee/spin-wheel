@@ -1836,9 +1836,16 @@ export default function App() {
                 <div
                   style={{
                     position: "relative",
-                    width: isShortLandscape
-                      ? `min(${Math.max(viewportSize.height - 10, 240)}px, 92vw)`
-                      : `min(${Math.max(viewportSize.height - 20, 420)}px, 82vw)`,
+                    width:
+                      viewportSize.width > viewportSize.height
+                        ? `${Math.max(
+                          Math.min(
+                            viewportSize.height - (isShortLandscape ? 36 : 56),
+                            isShortLandscape ? 520 : 820
+                          ),
+                          isShortLandscape ? 260 : 420
+                        )}px`
+                        : `min(92vw, 620px)`
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
