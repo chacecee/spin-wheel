@@ -616,11 +616,7 @@ export default function App() {
     };
   }, [roomRef, discordAuthUser]);
 
-  useEffect(() => {
-    if (phase !== "editing") {
-      setIsGoingToSpinner(false);
-    }
-  }, [phase]);
+
 
   useEffect(() => {
     if (!debugMessage) return;
@@ -654,6 +650,12 @@ export default function App() {
   const phase = roomData?.phase || "editing";
   const currentEntries = roomData?.entries || [];
   const winnerIndex = roomData?.winnerIndex;
+
+  useEffect(() => {
+    if (phase !== "editing") {
+      setIsGoingToSpinner(false);
+    }
+  }, [phase]);
 
   const winnerName =
     typeof winnerIndex === "number" && currentEntries[winnerIndex]
@@ -1609,20 +1611,36 @@ export default function App() {
           )}
 
           {!stageIsWheel && (
-            <h1
-              style={{
-                textAlign: "center",
-                fontSize: isShortLandscape ? "24px" : "32px",
-                fontWeight: "800",
-                marginBottom: isShortLandscape ? "10px" : "18px",
-                marginTop: "0",
-                letterSpacing: "-0.03em",
-                color: "rgba(255,255,255,0.78)",
-                textShadow: "0 2px 10px rgba(0,0,0,0.18)",
-              }}
-            >
-              Edit your wheel
-            </h1>
+            <div style={{ textAlign: "center", marginBottom: isShortLandscape ? "10px" : "18px" }}>
+              <h1
+                style={{
+                  fontSize: isShortLandscape ? "24px" : "32px",
+                  fontWeight: "800",
+                  marginBottom: isHost ? "8px" : "0",
+                  marginTop: "0",
+                  letterSpacing: "-0.03em",
+                  color: "rgba(255,255,255,0.78)",
+                  textShadow: "0 2px 10px rgba(0,0,0,0.18)",
+                }}
+              >
+                Edit your wheel
+              </h1>
+
+              {isHost && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "14px",
+                    lineHeight: 1.5,
+                    color: "rgba(255,255,255,0.62)",
+                    maxWidth: "680px",
+                  }}
+                >
+                  You are the group&apos;s host, which means only you can edit entries unless
+                  you transfer the host role to someone else below.
+                </p>
+              )}
+            </div>
           )}
 
           {phase === "editing" ? (
@@ -1909,19 +1927,315 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <LoadingCard
-                  title={
-                    roomData?.phase === "ready" || roomData?.phase === "spinning"
-                      ? "Heading to the spinner..."
-                      : "Your host is setting up the wheel"
-                  }
-                  subtitle={
-                    roomData?.phase === "ready" || roomData?.phase === "spinning"
-                      ? "The spinner is about to load..."
-                      : "Your host is currently setting up the wheel entries. Please give them a moment..."
-                  }
-                  showFakeProgress={false}
-                />
+                <div
+                  style={{
+                    width: "100%",
+                    maxWidth:
+                      viewportSize.width > viewportSize.height
+                        ? "min(70vw, 760px)"
+                        : "760px",
+                    margin: "0 auto",
+                    padding: isShortLandscape ? "0 18px" : "0",
+                    paddingRight: isShortLandscape ? "138px" : "0",
+                    boxSizing: "border-box",
+                    position: "relative",
+                  }}
+                >
+                  <div
+                    style={{
+                      marginBottom: "18px",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div
+                      style={{
+                        marginBottom: "10px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      Transfer host
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        alignItems: "stretch",
+                        flexWrap: viewportSize.width > viewportSize.height ? "wrap" : "nowrap",
+                        width: "100%",
+                        maxWidth:
+                          viewportSize.width > viewportSize.height
+                            ? "min(65vw, 760px)"
+                            : "100%",
+                        margin: "0 auto",
+                      }}
+                    >
+                      <select
+                        disabled
+                        value=""
+                        style={{
+                          flex: isShortLandscape ? "1 1 320px" : "0 1 420px",
+                          maxWidth: isShortLandscape ? "760px" : "420px",
+                          minWidth: 0,
+                          padding: "12px",
+                          borderRadius: "5px",
+                          border: "1px solid #334155",
+                          background: "#091833",
+                          color: "rgba(255,255,255,0.6)",
+                          fontSize: "16px",
+                        }}
+                      >
+                        <option>Select a participant</option>
+                      </select>
+
+                      <button
+                        disabled
+                        style={{
+                          ...purpleButtonStyle,
+                          opacity: 0.55,
+                          cursor: "default",
+                        }}
+                      >
+                        Transfer Host
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      marginBottom: "20px",
+                      textAlign: "left",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span style={{ color: "#ffffff", fontWeight: 700 }}>
+                        {roomData?.mode === "participants" ? "Spin Participants" : "Spin Custom Entries"}
+                      </span>
+
+                      <button
+                        disabled
+                        style={{
+                          width: "58px",
+                          height: "30px",
+                          borderRadius: "999px",
+                          border: "1px solid #56308d",
+                          background: roomData?.mode === "participants" ? "#3a1d63" : "#111827",
+                          position: "relative",
+                          padding: 0,
+                          opacity: 0.75,
+                        }}
+                      >
+                        <span
+                          style={{
+                            position: "absolute",
+                            top: "3px",
+                            left: roomData?.mode === "participants" ? "31px" : "3px",
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "999px",
+                            background: "#ffffff",
+                          }}
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ marginBottom: "10px", fontWeight: "bold" }}>
+                      Entries
+                    </div>
+
+                    <div
+                      style={{
+                        maxHeight: isShortLandscape ? "none" : "198px",
+                        overflowY: isShortLandscape ? "visible" : "auto",
+                        paddingRight: "4px",
+                        marginBottom: "12px",
+                      }}
+                    >
+                      {(roomData?.entries?.length ? roomData.entries : ["", "", ""]).map((entry, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            alignItems: "center",
+                            width: "100%",
+                            maxWidth:
+                              viewportSize.width > viewportSize.height
+                                ? "min(65vw, 760px)"
+                                : "100%",
+                            margin: "0 auto 14px",
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={entry}
+                            readOnly
+                            placeholder={`Entry ${index + 1}`}
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              padding: "12px",
+                              borderRadius: "5px",
+                              border: "1px solid #334155",
+                              background: "#091833",
+                              color: "rgba(255,255,255,0.72)",
+                              fontSize: "16px",
+                            }}
+                          />
+
+                          <button
+                            disabled
+                            style={{
+                              ...iconButtonStyle,
+                              opacity: 0.55,
+                              cursor: "default",
+                            }}
+                            aria-label="Remove entry"
+                            title="Remove entry"
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4h8v2" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        display: "flex",
+                        gap: "10px",
+                        width:
+                          viewportSize.width > viewportSize.height
+                            ? "min(65vw, 760px)"
+                            : "auto",
+                        marginLeft: "auto",
+                        marginRight: "auto",
+                        justifyContent: "flex-start",
+                      }}
+                    >
+                      <button
+                        disabled
+                        style={{
+                          ...purpleButtonStyle,
+                          opacity: 0.55,
+                          cursor: "default",
+                        }}
+                      >
+                        Add More
+                      </button>
+                      <button
+                        disabled
+                        style={{
+                          ...purpleButtonStyle,
+                          opacity: 0.75,
+                          cursor: "default",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: "14px",
+                            height: "14px",
+                            borderRadius: "999px",
+                            border: "2px solid rgba(255,255,255,0.25)",
+                            borderTopColor: "#ffffff",
+                            animation: "wheelSpinner 0.85s linear infinite",
+                          }}
+                        />
+                        Waiting for host...
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      borderRadius: "10px",
+                      background: "rgba(47, 17, 78, 0.42)",
+                      backdropFilter: "blur(1.5px)",
+                      zIndex: 15,
+                      pointerEvents: "auto",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "12px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        width: "min(92%, 620px)",
+                        textAlign: "center",
+                        padding: "14px 16px",
+                        borderRadius: "8px",
+                        background: "rgba(18, 10, 34, 0.82)",
+                        border: "1px solid rgba(167,139,250,0.28)",
+                        color: "#f3e8ff",
+                        boxShadow: "0 10px 30px rgba(0,0,0,0.22)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          margin: "0 auto 10px",
+                          borderRadius: "999px",
+                          border: "3px solid rgba(255,255,255,0.14)",
+                          borderTopColor: "#a78bfa",
+                          animation: "wheelSpinner 0.85s linear infinite",
+                        }}
+                      />
+                      <div
+                        style={{
+                          fontWeight: "700",
+                          fontSize: "16px",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Your group&apos;s host is preparing the wheel
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          color: "rgba(255,255,255,0.78)",
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        Please give them a moment while they finish entering the options.
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </>
           ) : (
@@ -2032,7 +2346,7 @@ export default function App() {
                         const textColor = getSliceTextColor(index);
                         const fillColor = getSliceFill(index);
 
-                        const label = entry.length > 12 ? entry.slice(0, 17) + "…" : entry;
+                        const label = entry.length > 17 ? entry.slice(0, 17) + "…" : entry;
 
                         const sliceFontSize =
                           label.length <= 6
