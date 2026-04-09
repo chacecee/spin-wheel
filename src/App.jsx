@@ -1540,7 +1540,7 @@ export default function App() {
               style={{
                 position: "absolute",
                 top: "18px",
-                right: "6px",
+                left: "6px",
                 background: "transparent",
                 border: "1px solid rgba(255,255,255,0.26)",
                 color: "rgba(255,255,255,0.82)",
@@ -1746,14 +1746,13 @@ export default function App() {
                           style={{
                             display: "flex",
                             gap: "10px",
-                            marginBottom: "14px",
                             alignItems: "center",
                             width: "100%",
                             maxWidth:
                               viewportSize.width > viewportSize.height
                                 ? "min(65vw, 760px)"
                                 : "100%",
-                            margin: "0 auto",
+                            margin: "0 auto 14px",
                           }}
                         >
                           <input
@@ -1953,12 +1952,14 @@ export default function App() {
 
                         const sliceFontSize =
                           label.length <= 4
-                            ? 30
+                            ? 42
                             : label.length <= 6
-                              ? 27
+                              ? 36
                               : label.length <= 8
-                                ? 24
-                                : 20;
+                                ? 30
+                                : label.length <= 10
+                                  ? 24
+                                  : 20;
 
                         return (
                           <g key={`${entry}-${index}`}>
