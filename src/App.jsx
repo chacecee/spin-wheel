@@ -165,8 +165,8 @@ export default function App() {
   const DEBUG_UI_ENABLED = false;
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [viewportSize, setViewportSize] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: window.visualViewport?.width || window.innerWidth,
+    height: window.visualViewport?.height || window.innerHeight,
   });
 
   const tadaAudioRef = useRef(null);
@@ -358,17 +358,32 @@ export default function App() {
   useEffect(() => {
     function handleResize() {
       setViewportSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
+        width: window.visualViewport?.width || window.innerWidth,
+        height: window.visualViewport?.height || window.innerHeight,
       });
     }
 
+    handleResize();
+
     window.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (!stageIsWheel) return;
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    const appRoot = document.querySelector(".app");
+    if (appRoot) {
+      appRoot.scrollTop = 0;
+    }
+  }, [stageIsWheel, phase]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -1135,6 +1150,10 @@ export default function App() {
   const stageIsWheel =
     phase === "ready" || phase === "spinning" || phase === "result";
 
+  const wheelStageHeight = isShortLandscape
+    ? `${Math.max(viewportSize.height - 10, 260)}px`
+    : `${Math.max(viewportSize.height - 24, 420)}px`;
+
   const wheelSize = 760;
   const center = wheelSize / 2;
   const outerRadius = 242;
@@ -1804,25 +1823,27 @@ export default function App() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  minHeight: isShortLandscape ? "calc(100vh - 26px)" : "calc(100vh - 26px)",
+                  height: wheelStageHeight,
+                  minHeight: wheelStageHeight,
                   display: "flex",
-                  alignItems: isShortLandscape ? "flex-start" : "center",
+                  alignItems: "flex-start",
                   justifyContent: "center",
                   overflow: "hidden",
-                  paddingTop: "0",
+                  paddingTop: isShortLandscape ? "14px" : "10px",
+                  boxSizing: "border-box",
                 }}
               >
                 <div
                   style={{
                     position: "relative",
                     width: isShortLandscape
-                      ? "min(124vw, 860px)"
-                      : "min(94vw, 1120px)",
+                      ? `min(${Math.max(viewportSize.height - 44, 240)}px, 92vw)`
+                      : `min(${Math.max(viewportSize.height - 80, 420)}px, 82vw)`,
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: isShortLandscape ? "-10px" : "0",
+                    marginTop: "0",
                   }}
                 >
                   <div
@@ -2095,15 +2116,18 @@ export default function App() {
                   {phase === "result" && (
                     <div
                       style={{
-                        position: "relative",
-                        width: isShortLandscape
-                          ? "min(78vh, 92vw)"
-                          : "min(72vw, 820px)",
-                        aspectRatio: "1 / 1",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginTop: isShortLandscape ? "-4px" : "0",
+                        position: "absolute",
+                        left: "50%",
+                        bottom: isShortLandscape ? "10px" : "7%",
+                        transform: "translateX(-50%)",
+                        width: isShortLandscape ? "min(78%, 420px)" : "min(72%, 560px)",
+                        background: "rgba(7, 7, 10, 0.95)",
+                        border: `1px solid ${GOLD_DARK}`,
+                        borderRadius: "5px",
+                        boxShadow:
+                          "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
+                        zIndex: 10,
+                        overflow: "hidden",
                       }}
                     >
                       <div
