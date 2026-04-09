@@ -1506,12 +1506,13 @@ export default function App() {
             maxWidth: stageIsWheel
               ? isShortLandscape
                 ? "1200px"
-                : "1400px"
+                : "1600px"
               : isShortLandscape
-                ? "980px"
+                ? "860px"
                 : "760px",
             position: "relative",
             overflow: "visible",
+            margin: "0 auto",
           }}
         >
           {(phase === "ready" || phase === "result") && isHost && (
@@ -1564,8 +1565,8 @@ export default function App() {
                 <div
                   style={{
                     width: "100%",
-                    padding: "0",
-                    paddingRight: isShortLandscape ? "120px" : "0",
+                    padding: isShortLandscape ? "0 18px" : "0",
+                    paddingRight: isShortLandscape ? "138px" : "0",
                     boxSizing: "border-box",
                   }}
                 >
@@ -1813,13 +1814,13 @@ export default function App() {
                   style={{
                     position: "relative",
                     width: isShortLandscape
-                      ? "min(140vw, 980px)"
-                      : "min(96vw, 90vh, 1120px)",
+                      ? "min(124vw, 860px)"
+                      : "min(94vw, 1120px)",
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: isShortLandscape ? "-18px" : "6px",
+                    marginTop: isShortLandscape ? "-10px" : "0",
                   }}
                 >
                   <div
@@ -1970,7 +1971,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "1.8%" : "16%",
+                      right: isShortLandscape ? "1.8%" : "10.5%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
@@ -1986,7 +1987,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "0.1%" : "14%",
+                      right: isShortLandscape ? "0.1%" : "8.8%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: "22px",
