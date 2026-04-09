@@ -1565,6 +1565,8 @@ export default function App() {
                 <div
                   style={{
                     width: "100%",
+                    maxWidth: isShortLandscape ? "860px" : "760px",
+                    margin: "0 auto",
                     padding: isShortLandscape ? "0 18px" : "0",
                     paddingRight: isShortLandscape ? "138px" : "0",
                     boxSizing: "border-box",
@@ -1802,12 +1804,12 @@ export default function App() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  minHeight: isShortLandscape ? "calc(100vh - 10px)" : "calc(100vh - 28px)",
+                  minHeight: isShortLandscape ? "calc(100vh - 6px)" : "calc(100vh - 16px)",
                   display: "flex",
                   alignItems: isShortLandscape ? "flex-start" : "center",
                   justifyContent: "center",
                   overflow: "hidden",
-                  paddingTop: isShortLandscape ? "10px" : "0",
+                  paddingTop: isShortLandscape ? "2px" : "0",
                 }}
               >
                 <div
@@ -2093,18 +2095,15 @@ export default function App() {
                   {phase === "result" && (
                     <div
                       style={{
-                        position: "absolute",
-                        left: "50%",
-                        bottom: isShortLandscape ? "16%" : "7%",
-                        transform: "translateX(-50%)",
-                        width: isShortLandscape ? "min(76%, 500px)" : "min(72%, 560px)",
-                        background: "rgba(7, 7, 10, 0.95)",
-                        border: `1px solid ${GOLD_DARK}`,
-                        borderRadius: "5px",
-                        boxShadow:
-                          "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
-                        zIndex: 10,
-                        overflow: "hidden",
+                        position: "relative",
+                        width: isShortLandscape
+                          ? "min(102vw, 700px)"
+                          : "min(78vw, 860px)",
+                        aspectRatio: "1 / 1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginTop: isShortLandscape ? "-4px" : "0",
                       }}
                     >
                       <div
