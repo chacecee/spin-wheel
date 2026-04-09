@@ -2037,7 +2037,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "1.8%" : "2.8%",
+                      right: isShortLandscape ? "1.8%" : "1%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
