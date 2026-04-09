@@ -90,6 +90,7 @@ export default function App() {
   const celebratedSpinRef = useRef(null);
   const spinFadeIntervalRef = useRef(null);
   const spinStopTimeoutRef = useRef(null);
+  const lastEditHydrationKeyRef = useRef("");
 
   const roomRef = useMemo(() => {
     if (!discordInstanceId) return null;
@@ -496,6 +497,7 @@ export default function App() {
     return participantList.map((participant) => participant.name);
   }, [participantList]);
 
+  const isHostResolved = Boolean(roomData && localUserId);
   const isHost = roomData?.hostId === localUserId;
   const phase = roomData?.phase || "editing";
   const currentEntries = roomData?.entries || [];
@@ -514,6 +516,19 @@ export default function App() {
     const modeFromRoom = roomData.mode || "custom";
     const entriesFromRoom = roomData.entries || [];
 
+    const hydrationKey = JSON.stringify({
+      hostId: roomData.hostId || "",
+      phase,
+      mode: modeFromRoom,
+      entries: entriesFromRoom,
+    });
+
+    if (lastEditHydrationKeyRef.current === hydrationKey) {
+      return;
+    }
+
+    lastEditHydrationKeyRef.current = hydrationKey;
+
     setDraftMode(modeFromRoom);
 
     if (modeFromRoom === "participants") {
@@ -523,7 +538,10 @@ export default function App() {
         setDraftEntries(participantNames.slice(0, 20));
       }
     } else {
-      if (entriesFromRoom.length > 0 && entriesFromRoom.some((entry) => entry.trim() !== "")) {
+      if (
+        entriesFromRoom.length > 0 &&
+        entriesFromRoom.some((entry) => entry.trim() !== "")
+      ) {
         setDraftEntries(entriesFromRoom);
       } else {
         setDraftEntries(["", "", ""]);
@@ -531,15 +549,7 @@ export default function App() {
     }
 
     setSelectedHostId("");
-  }, [
-    roomData?.hostId,
-    roomData?.phase,
-    roomData?.mode,
-    roomData?.entries,
-    isHost,
-    phase,
-    participantNames,
-  ]);
+  }, [roomData, isHost, phase, participantNames]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -1406,7 +1416,38 @@ export default function App() {
 
           {phase === "editing" ? (
             <>
-              {isHost ? (
+              {!isHostResolved ? (
+                <div
+                  style={{
+                    marginTop: "20px",
+                    padding: "20px",
+                    borderRadius: "5px",
+                    background: "#091833",
+                    border: "1px solid #334155",
+                    textAlign: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      marginBottom: "8px",
+                      color: "#ffffff",
+                    }}
+                  >
+                    Loading wheel setup...
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: "14px",
+                      color: "rgba(255,255,255,0.72)",
+                    }}
+                  >
+                    Connecting to your Discord activity session.
+                  </div>
+                </div>
+              ) : isHost ? (
                 <div
                   style={{
                     width: "100%",
