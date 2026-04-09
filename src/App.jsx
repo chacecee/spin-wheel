@@ -1746,7 +1746,7 @@ export default function App() {
                           style={{
                             display: "flex",
                             gap: "10px",
-                            marginBottom: "10px",
+                            marginBottom: "14px",
                             alignItems: "center",
                             width: "100%",
                             maxWidth:
@@ -1951,6 +1951,15 @@ export default function App() {
 
                         const label = entry.length > 12 ? entry.slice(0, 12) + "…" : entry;
 
+                        const sliceFontSize =
+                          label.length <= 4
+                            ? 30
+                            : label.length <= 6
+                              ? 27
+                              : label.length <= 8
+                                ? 24
+                                : 20;
+
                         return (
                           <g key={`${entry}-${index}`}>
                             <path
@@ -1963,7 +1972,7 @@ export default function App() {
                               x={textPoint.x}
                               y={textPoint.y}
                               fill={textColor}
-                              fontSize="20"
+                              fontSize={sliceFontSize}
                               fontWeight="700"
                               letterSpacing="0.1px"
                               textAnchor="middle"
@@ -1972,291 +1981,293 @@ export default function App() {
                             >
                               {label}
                             </text>
+                            {label}
+                          </text>
                           </g>
-                        );
+                    );
                       })}
 
-                      {Array.from({ length: studCount }).map((_, index) => {
-                        const angle = (360 / studCount) * index;
-                        const point = polarToCartesian(
-                          center,
-                          center,
-                          studRingRadius,
-                          angle
-                        );
+                    {Array.from({ length: studCount }).map((_, index) => {
+                      const angle = (360 / studCount) * index;
+                      const point = polarToCartesian(
+                        center,
+                        center,
+                        studRingRadius,
+                        angle
+                      );
 
-                        return (
-                          <circle
-                            key={index}
-                            cx={point.x}
-                            cy={point.y}
-                            r="4.2"
-                            fill="url(#goldStudGradient)"
-                            stroke="#fff0a5"
-                            strokeWidth="0.8"
-                          />
-                        );
-                      })}
+                      return (
+                        <circle
+                          key={index}
+                          cx={point.x}
+                          cy={point.y}
+                          r="4.2"
+                          fill="url(#goldStudGradient)"
+                          stroke="#fff0a5"
+                          strokeWidth="0.8"
+                        />
+                      );
+                    })}
 
-                      <circle
-                        cx={center}
-                        cy={center}
-                        r={hubRadius}
-                        fill="url(#hubDarkGradient)"
-                        stroke="rgba(255,255,255,0.08)"
-                        strokeWidth="3"
-                      />
+                    <circle
+                      cx={center}
+                      cy={center}
+                      r={hubRadius}
+                      fill="url(#hubDarkGradient)"
+                      stroke="rgba(255,255,255,0.08)"
+                      strokeWidth="3"
+                    />
 
-                      <circle
-                        cx={center}
-                        cy={center}
-                        r={hubRadius * 0.78}
-                        fill="rgba(255,255,255,0.035)"
-                      />
-                    </svg>
-                  </div>
+                    <circle
+                      cx={center}
+                      cy={center}
+                      r={hubRadius * 0.78}
+                      fill="rgba(255,255,255,0.035)"
+                    />
+                  </svg>
+                </div>
 
+                <div
+                  style={{
+                    position: "absolute",
+                    right: isShortLandscape ? "1.8%" : "10.5%",
+                    top: "50%",
+                    transform: "translateY(-50%) rotate(90deg)",
+                    width: 0,
+                    height: 0,
+                    borderLeft: "16px solid transparent",
+                    borderRight: "16px solid transparent",
+                    borderTop: `34px solid ${GOLD_MAIN}`,
+                    filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+                    zIndex: 7,
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    right: isShortLandscape ? "0.1%" : "8.8%",
+                    top: "50%",
+                    transform: "translateY(-50%) rotate(90deg)",
+                    width: "22px",
+                    height: "28px",
+                    borderRadius: "0 0 5px 5px",
+                    background:
+                      "linear-gradient(180deg, #fff3b5 0%, #d8a81f 48%, #8b580f 100%)",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                    zIndex: 6,
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 8,
+                    pointerEvents: "none",
+                  }}
+                >
                   <div
+                    onClick={phase === "ready" && isHost ? handleSpin : undefined}
                     style={{
-                      position: "absolute",
-                      right: isShortLandscape ? "1.8%" : "10.5%",
-                      top: "50%",
-                      transform: "translateY(-50%) rotate(90deg)",
-                      width: 0,
-                      height: 0,
-                      borderLeft: "16px solid transparent",
-                      borderRight: "16px solid transparent",
-                      borderTop: `34px solid ${GOLD_MAIN}`,
-                      filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
-                      zIndex: 7,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: isShortLandscape ? "0.1%" : "8.8%",
-                      top: "50%",
-                      transform: "translateY(-50%) rotate(90deg)",
-                      width: "22px",
-                      height: "28px",
-                      borderRadius: "0 0 5px 5px",
+                      width: "19%",
+                      minWidth: "108px",
+                      maxWidth: "150px",
+                      aspectRatio: "1 / 1",
+                      borderRadius: "999px",
                       background:
-                        "linear-gradient(180deg, #fff3b5 0%, #d8a81f 48%, #8b580f 100%)",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-                      zIndex: 6,
-                    }}
-                  />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
+                        "radial-gradient(circle at 35% 30%, #4a3722 0%, #231b15 50%, #15110e 100%)",
+                      border: "2px solid rgba(255,255,255,0.08)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      zIndex: 8,
-                      pointerEvents: "none",
+                      textAlign: "center",
+                      boxShadow: "0 12px 34px rgba(0,0,0,0.35)",
+                      pointerEvents: "auto",
+                      userSelect: "none",
+                      cursor: phase === "ready" && isHost ? "pointer" : "default",
+                    }}
+                  >
+                    {phase === "ready" && (
+                      <>
+                        {isHost ? (
+                          <div
+                            style={{
+                              color: "#ffffff",
+                              fontWeight: 800,
+                              fontSize: "clamp(20px, 2.1vw, 34px)",
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Spin
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              color: "#e5e7eb",
+                              fontWeight: 700,
+                              fontSize: "clamp(12px, 1.1vw, 16px)",
+                              padding: "0 10px",
+                            }}
+                          >
+                            Waiting
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {phase === "spinning" && (
+                      <div
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: 800,
+                          fontSize: "clamp(14px, 1.5vw, 24px)",
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        ...
+                      </div>
+                    )}
+
+                    {phase === "result" && (
+                      <div
+                        style={{
+                          color: "#ffffff",
+                          fontWeight: 900,
+                          fontSize: "clamp(34px, 4vw, 58px)",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {phase === "result" && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      bottom: isShortLandscape ? "10px" : "7%",
+                      transform: "translateX(-50%)",
+                      width: isShortLandscape ? "min(78%, 420px)" : "min(72%, 560px)",
+                      background: "rgba(7, 7, 10, 0.95)",
+                      border: `1px solid ${GOLD_DARK}`,
+                      borderRadius: "5px",
+                      boxShadow:
+                        "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
+                      zIndex: 10,
+                      overflow: "hidden",
                     }}
                   >
                     <div
-                      onClick={phase === "ready" && isHost ? handleSpin : undefined}
                       style={{
-                        width: "19%",
-                        minWidth: "108px",
-                        maxWidth: "150px",
-                        aspectRatio: "1 / 1",
-                        borderRadius: "999px",
                         background:
-                          "radial-gradient(circle at 35% 30%, #4a3722 0%, #231b15 50%, #15110e 100%)",
-                        border: "2px solid rgba(255,255,255,0.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                          "linear-gradient(90deg, #6f4b08 0%, #c99819 35%, #f4d66f 50%, #c99819 65%, #6f4b08 100%)",
+                        color: "#17120b",
+                        padding: "10px 16px",
+                        fontWeight: "800",
                         textAlign: "center",
-                        boxShadow: "0 12px 34px rgba(0,0,0,0.35)",
-                        pointerEvents: "auto",
-                        userSelect: "none",
-                        cursor: phase === "ready" && isHost ? "pointer" : "default",
+                        letterSpacing: "0.2px",
+                        fontSize: "clamp(14px, 1vw, 16px)",
                       }}
                     >
-                      {phase === "ready" && (
+                      We have a winner!
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "18px 18px 16px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "clamp(28px, 4vw, 52px)",
+                          fontWeight: 300,
+                          marginBottom: "14px",
+                          color: "#fff7d7",
+                          textShadow: "0 0 20px rgba(212,166,42,0.08)",
+                          lineHeight: 1.05,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {winnerName || "Unknown"}
+                      </div>
+
+                      {isHost ? (
                         <>
-                          {isHost ? (
-                            <div
-                              style={{
-                                color: "#ffffff",
-                                fontWeight: 800,
-                                fontSize: "clamp(20px, 2.1vw, 34px)",
-                                letterSpacing: "0.08em",
-                                textTransform: "uppercase",
-                              }}
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "10px",
+                              marginBottom: "14px",
+                              color: "#f1e7bf",
+                              fontSize: "clamp(12px, 1vw, 16px)",
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={removeWinnerNextSpin}
+                              onChange={(e) =>
+                                setRemoveWinnerNextSpin(e.target.checked)
+                              }
+                            />
+                            Remove winner from next spin
+                          </label>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "center",
+                              gap: "12px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <button
+                              onClick={handleKeepSpinning}
+                              style={mutedButtonStyle}
                             >
-                              Spin
-                            </div>
-                          ) : (
-                            <div
-                              style={{
-                                color: "#e5e7eb",
-                                fontWeight: 700,
-                                fontSize: "clamp(12px, 1.1vw, 16px)",
-                                padding: "0 10px",
-                              }}
-                            >
-                              Waiting
-                            </div>
-                          )}
+                              Keep Spinning
+                            </button>
+                            <button onClick={handleStartFresh} style={mutedButtonStyle}>
+                              Start Fresh
+                            </button>
+                          </div>
                         </>
-                      )}
-
-                      {phase === "spinning" && (
-                        <div
-                          style={{
-                            color: "#ffffff",
-                            fontWeight: 800,
-                            fontSize: "clamp(14px, 1.5vw, 24px)",
-                            letterSpacing: "0.08em",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          ...
-                        </div>
-                      )}
-
-                      {phase === "result" && (
-                        <div
-                          style={{
-                            color: "#ffffff",
-                            fontWeight: 900,
-                            fontSize: "clamp(34px, 4vw, 58px)",
-                            lineHeight: 1,
-                          }}
-                        >
-                          ✓
+                      ) : (
+                        <div style={{ color: "#d6d0b2" }}>
+                          Waiting for host to continue.
                         </div>
                       )}
                     </div>
                   </div>
-
-                  {phase === "result" && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: "50%",
-                        bottom: isShortLandscape ? "10px" : "7%",
-                        transform: "translateX(-50%)",
-                        width: isShortLandscape ? "min(78%, 420px)" : "min(72%, 560px)",
-                        background: "rgba(7, 7, 10, 0.95)",
-                        border: `1px solid ${GOLD_DARK}`,
-                        borderRadius: "5px",
-                        boxShadow:
-                          "0 18px 50px rgba(0,0,0,0.45), 0 0 0 1px rgba(246,222,138,0.06)",
-                        zIndex: 10,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          background:
-                            "linear-gradient(90deg, #6f4b08 0%, #c99819 35%, #f4d66f 50%, #c99819 65%, #6f4b08 100%)",
-                          color: "#17120b",
-                          padding: "10px 16px",
-                          fontWeight: "800",
-                          textAlign: "center",
-                          letterSpacing: "0.2px",
-                          fontSize: "clamp(14px, 1vw, 16px)",
-                        }}
-                      >
-                        We have a winner!
-                      </div>
-
-                      <div
-                        style={{
-                          padding: "18px 18px 16px",
-                          textAlign: "center",
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: "clamp(28px, 4vw, 52px)",
-                            fontWeight: 300,
-                            marginBottom: "14px",
-                            color: "#fff7d7",
-                            textShadow: "0 0 20px rgba(212,166,42,0.08)",
-                            lineHeight: 1.05,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {winnerName || "Unknown"}
-                        </div>
-
-                        {isHost ? (
-                          <>
-                            <label
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                gap: "10px",
-                                marginBottom: "14px",
-                                color: "#f1e7bf",
-                                fontSize: "clamp(12px, 1vw, 16px)",
-                              }}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={removeWinnerNextSpin}
-                                onChange={(e) =>
-                                  setRemoveWinnerNextSpin(e.target.checked)
-                                }
-                              />
-                              Remove winner from next spin
-                            </label>
-
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "center",
-                                gap: "12px",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <button
-                                onClick={handleKeepSpinning}
-                                style={mutedButtonStyle}
-                              >
-                                Keep Spinning
-                              </button>
-                              <button onClick={handleStartFresh} style={mutedButtonStyle}>
-                                Start Fresh
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <div style={{ color: "#d6d0b2" }}>
-                            Waiting for host to continue.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              <p
-                style={{
-                  marginTop: "4px",
-                  textAlign: "center",
-                  fontSize: "14px",
-                  color: "#86efac",
-                }}
-              >
-                {debugMessage}
-              </p>
-            </>
+          <p
+            style={{
+              marginTop: "4px",
+              textAlign: "center",
+              fontSize: "14px",
+              color: "#86efac",
+            }}
+          >
+            {debugMessage}
+          </p>
+        </>
           )}
-        </div>
       </div>
     </div>
+    </div >
   );
 }
