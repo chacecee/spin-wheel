@@ -1586,7 +1586,7 @@ export default function App() {
                     width: "100%",
                     maxWidth:
                       viewportSize.width > viewportSize.height
-                        ? "min(50vw, 760px)"
+                        ? "min(70vw, 760px)"
                         : "760px",
                     margin: "0 auto",
                     padding: isShortLandscape ? "0 18px" : "0",
@@ -1618,7 +1618,7 @@ export default function App() {
                         width: "100%",
                         maxWidth:
                           viewportSize.width > viewportSize.height
-                            ? "min(50vw, 760px)"
+                            ? "min(65vw, 760px)"
                             : "100%",
                         margin: "0 auto",
                       }}
@@ -1751,7 +1751,7 @@ export default function App() {
                             width: "100%",
                             maxWidth:
                               viewportSize.width > viewportSize.height
-                                ? "min(50vw, 760px)"
+                                ? "min(65vw, 760px)"
                                 : "100%",
                             margin: "0 auto",
                           }}
@@ -1807,7 +1807,7 @@ export default function App() {
                         gap: "10px",
                         width:
                           viewportSize.width > viewportSize.height
-                            ? "min(50vw, 760px)"
+                            ? "min(65vw, 760px)"
                             : "auto",
                         marginLeft: "auto",
                         marginRight: "auto",
@@ -1855,7 +1855,6 @@ export default function App() {
                   overflow: "hidden",
                   paddingTop: isShortLandscape ? "14px" : "10px",
                   boxSizing: "border-box",
-                  outline: "2px solid red",
                 }}
               >
                 <div
@@ -1870,7 +1869,6 @@ export default function App() {
                     alignItems: "center",
                     justifyContent: "center",
                     marginTop: "0",
-                    outline: "2px solid lime",
                   }}
                 >
                   <div
@@ -1892,7 +1890,6 @@ export default function App() {
                       viewBox={`0 0 ${wheelSize} ${wheelSize}`}
                       style={{
                         filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
-                        outline: "2px solid cyan",
                       }}
                     >
                       <defs>
