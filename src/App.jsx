@@ -1156,10 +1156,10 @@ export default function App() {
 
   const wheelSize = 760;
 const center = wheelSize / 2;
-const outerRadius = 310;
-const sliceRadius = 292;
+const outerRadius = 350;
+const sliceRadius = 332;
 const hubRadius = 72;
-const studRingRadius = 302;
+const studRingRadius = 344;
 const studCount = 18;
   const sliceAngle = currentEntries.length > 0 ? 360 / currentEntries.length : 360;
 
