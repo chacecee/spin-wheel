@@ -160,6 +160,7 @@ export default function App() {
   const [selectedHostId, setSelectedHostId] = useState("");
   const [removeWinnerNextSpin, setRemoveWinnerNextSpin] = useState(false);
   const [displayRotation, setDisplayRotation] = useState(0);
+  const [isGoingToSpinner, setIsGoingToSpinner] = useState(false);
 
   const [discordParticipants, setDiscordParticipants] = useState([]);
   const [sdkReady, setSdkReady] = useState(false);
@@ -184,6 +185,7 @@ export default function App() {
   const spinFadeIntervalRef = useRef(null);
   const spinStopTimeoutRef = useRef(null);
   const lastEditHydrationKeyRef = useRef("");
+  const previousParticipantNamesRef = useRef([]);
 
   const roomRef = useMemo(() => {
     if (!discordInstanceId) return null;
@@ -396,7 +398,25 @@ export default function App() {
 
         if (data?.room) {
           setRoomData(data.room);
-          setDebugMessage("Room loaded successfully.");
+
+          const nextParticipantNames = Object.values(data.room.participants || {}).map(
+            (participant) => participant?.name || "Someone"
+          );
+
+          const previousNames = previousParticipantNamesRef.current;
+          const joinedNames = nextParticipantNames.filter(
+            (name) => !previousNames.includes(name)
+          );
+
+          if (previousNames.length > 0 && joinedNames.length > 0) {
+            setDebugMessage(
+              joinedNames.length === 1
+                ? `${joinedNames[0]} has joined.`
+                : `${joinedNames.join(", ")} have joined.`
+            );
+          }
+
+          previousParticipantNamesRef.current = nextParticipantNames;
         } else {
           setRoomData(null);
           setDebugMessage("Room document does not exist yet.");
@@ -596,6 +616,23 @@ export default function App() {
     };
   }, [roomRef, discordAuthUser]);
 
+  useEffect(() => {
+    if (phase !== "editing") {
+      setIsGoingToSpinner(false);
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    if (!debugMessage) return;
+    if (!debugMessage.includes("has joined")) return;
+
+    const timeout = setTimeout(() => {
+      setDebugMessage("");
+    }, 2500);
+
+    return () => clearTimeout(timeout);
+  }, [debugMessage]);
+
   const participantsMap = roomData?.participants || {};
 
   const participantList = useMemo(() => {
@@ -757,7 +794,12 @@ export default function App() {
           spinAudio.currentTime = 0;
           spinAudio.loop = false;
           spinAudio.volume = 1;
-          spinAudio.play().catch(() => { });
+          spinAudio.load();
+
+          const playPromise = spinAudio.play();
+          if (playPromise?.catch) {
+            playPromise.catch(() => { });
+          }
 
           const fadeStartMs = Math.max(spinDuration - 1200, 0);
           const stopEarlyMs = Math.max(spinDuration - 250, 0);
@@ -915,6 +957,8 @@ export default function App() {
       return;
     }
 
+    setIsGoingToSpinner(true);
+
     const cleanedEntries = draftEntries
       .map((entry) => entry.trim())
       .filter((entry) => entry !== "");
@@ -946,6 +990,7 @@ export default function App() {
     } catch (error) {
       console.error("Failed to save setup:", error);
       setDebugMessage(`Failed to save setup: ${error.message}`);
+      setIsGoingToSpinner(false);
     }
   }
 
@@ -1824,8 +1869,31 @@ export default function App() {
                       <button onClick={handleAddDraftEntry} style={purpleButtonStyle}>
                         Add More
                       </button>
-                      <button onClick={handleSaveSetup} style={purpleButtonStyle}>
-                        Go to Spinner
+                      <button
+                        onClick={handleSaveSetup}
+                        disabled={isGoingToSpinner}
+                        style={{
+                          ...purpleButtonStyle,
+                          opacity: isGoingToSpinner ? 0.8 : 1,
+                          cursor: isGoingToSpinner ? "default" : "pointer",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        {isGoingToSpinner && (
+                          <span
+                            style={{
+                              width: "14px",
+                              height: "14px",
+                              borderRadius: "999px",
+                              border: "2px solid rgba(255,255,255,0.25)",
+                              borderTopColor: "#ffffff",
+                              animation: "wheelSpinner 0.85s linear infinite",
+                            }}
+                          />
+                        )}
+                        {isGoingToSpinner ? "Heading to Spinner..." : "Go to Spinner"}
                       </button>
                     </div>
                   </div>
@@ -1842,8 +1910,16 @@ export default function App() {
                 </div>
               ) : (
                 <LoadingCard
-                  title="Your host is setting up the wheel"
-                  subtitle="Your host is currently setting up the wheel entries. Please give them a moment..."
+                  title={
+                    roomData?.phase === "ready" || roomData?.phase === "spinning"
+                      ? "Heading to the spinner..."
+                      : "Your host is setting up the wheel"
+                  }
+                  subtitle={
+                    roomData?.phase === "ready" || roomData?.phase === "spinning"
+                      ? "The spinner is about to load..."
+                      : "Your host is currently setting up the wheel entries. Please give them a moment..."
+                  }
                   showFakeProgress={false}
                 />
               )}
