@@ -637,6 +637,10 @@ export default function App() {
     return () => clearTimeout(timeout);
   }, [debugMessage]);
 
+  
+
+  const participantsMap = roomData?.participants || {};
+
   useEffect(() => {
     if (!roomData?.hostId) return;
     if (!localUserId) return;
@@ -656,8 +660,6 @@ export default function App() {
 
     previousHostIdRef.current = roomData.hostId;
   }, [roomData?.hostId, localUserId, participantsMap]);
-
-  const participantsMap = roomData?.participants || {};
 
   const participantList = useMemo(() => {
     return Object.entries(participantsMap).map(([id, value]) => ({
