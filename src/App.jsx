@@ -1840,7 +1840,7 @@ export default function App() {
                       viewportSize.width > viewportSize.height
                         ? `${Math.max(
                           Math.min(
-                            viewportSize.height - (isShortLandscape ? 10 : 16),
+                            viewportSize.height - (isShortLandscape ? 0 : 0),
                             isShortLandscape ? 520 : 820
                           ),
                           isShortLandscape ? 260 : 420
