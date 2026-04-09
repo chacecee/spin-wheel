@@ -1845,7 +1845,7 @@ export default function App() {
                           ),
                           isShortLandscape ? 260 : 420
                         )}px`
-                        : `min(92vw, 620px)`
+                        : `min(92vw, 620px)`,
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
