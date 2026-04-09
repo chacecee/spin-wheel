@@ -1155,12 +1155,12 @@ export default function App() {
   }, [stageIsWheel, phase]);
 
   const wheelSize = 760;
-const center = wheelSize / 2;
-const outerRadius = 350;
-const sliceRadius = 332;
-const hubRadius = 72;
-const studRingRadius = 344;
-const studCount = 18;
+  const center = wheelSize / 2;
+  const outerRadius = 350;
+  const sliceRadius = 332;
+  const hubRadius = 72;
+  const studRingRadius = 344;
+  const studCount = 18;
   const sliceAngle = currentEntries.length > 0 ? 360 / currentEntries.length : 360;
 
   const purpleButtonStyle = {
@@ -1584,7 +1584,10 @@ const studCount = 18;
                 <div
                   style={{
                     width: "100%",
-                    maxWidth: isShortLandscape ? "860px" : "760px",
+                    maxWidth:
+                      viewportSize.width > viewportSize.height
+                        ? "min(50vw, 760px)"
+                        : "760px",
                     margin: "0 auto",
                     padding: isShortLandscape ? "0 18px" : "0",
                     paddingRight: isShortLandscape ? "138px" : "0",
@@ -1611,9 +1614,13 @@ const studCount = 18;
                         display: "flex",
                         gap: "8px",
                         alignItems: "stretch",
-                        flexWrap: isShortLandscape ? "wrap" : "nowrap",
+                        flexWrap: viewportSize.width > viewportSize.height ? "wrap" : "nowrap",
                         width: "100%",
-                        maxWidth: isShortLandscape ? "calc(100vw - 150px)" : "100%",
+                        maxWidth:
+                          viewportSize.width > viewportSize.height
+                            ? "min(50vw, 760px)"
+                            : "100%",
+                        margin: "0 auto",
                       }}
                     >
                       <select
@@ -1742,7 +1749,11 @@ const studCount = 18;
                             marginBottom: "10px",
                             alignItems: "center",
                             width: "100%",
-                            maxWidth: isShortLandscape ? "calc(100vw - 150px)" : "100%",
+                            maxWidth:
+                              viewportSize.width > viewportSize.height
+                                ? "min(50vw, 760px)"
+                                : "100%",
+                            margin: "0 auto",
                           }}
                         >
                           <input
@@ -1789,7 +1800,20 @@ const studCount = 18;
                       ))}
                     </div>
 
-                    <div style={{ marginTop: "12px", display: "flex", gap: "10px" }}>
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        display: "flex",
+                        gap: "10px",
+                        width:
+                          viewportSize.width > viewportSize.height
+                            ? "min(50vw, 760px)"
+                            : "auto",
+                        marginLeft: "auto",
+                        marginRight: "auto",
+                        justifyContent: "flex-start",
+                      }}
+                    >
                       <button onClick={handleAddDraftEntry} style={purpleButtonStyle}>
                         Add More
                       </button>
@@ -1820,35 +1844,35 @@ const studCount = 18;
           ) : (
             <>
               <div
-  style={{
-    position: "relative",
-    width: "100%",
-    height: wheelStageHeight,
-    minHeight: wheelStageHeight,
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "center",
-    overflow: "hidden",
-    paddingTop: isShortLandscape ? "14px" : "10px",
-    boxSizing: "border-box",
-    outline: "2px solid red",
-  }}
->
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  height: wheelStageHeight,
+                  minHeight: wheelStageHeight,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  paddingTop: isShortLandscape ? "14px" : "10px",
+                  boxSizing: "border-box",
+                  outline: "2px solid red",
+                }}
+              >
                 <div
-  style={{
-    position: "relative",
-    width:
-      viewportSize.width > viewportSize.height
-        ? "min(90vh, 84vw)"
-        : "min(92vw, 92vh)",
-    aspectRatio: "1 / 1",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: "0",
-    outline: "2px solid lime",
-  }}
->
+                  style={{
+                    position: "relative",
+                    width:
+                      viewportSize.width > viewportSize.height
+                        ? "min(90vh, 84vw)"
+                        : "min(92vw, 92vh)",
+                    aspectRatio: "1 / 1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: "0",
+                    outline: "2px solid lime",
+                  }}
+                >
                   <div
                     style={{
                       position: "relative",
@@ -1863,14 +1887,14 @@ const studCount = 18;
                     }}
                   >
                     <svg
-  width="100%"
-  height="100%"
-  viewBox={`0 0 ${wheelSize} ${wheelSize}`}
-  style={{
-    filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
-    outline: "2px solid cyan",
-  }}
->
+                      width="100%"
+                      height="100%"
+                      viewBox={`0 0 ${wheelSize} ${wheelSize}`}
+                      style={{
+                        filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+                        outline: "2px solid cyan",
+                      }}
+                    >
                       <defs>
                         <radialGradient id="rimPurpleGradient" cx="50%" cy="40%" r="70%">
                           <stop offset="0%" stopColor="#8e57d3" />
