@@ -1837,8 +1837,8 @@ export default function App() {
                   style={{
                     position: "relative",
                     width: isShortLandscape
-                      ? `min(${Math.max(viewportSize.height - 44, 240)}px, 92vw)`
-                      : `min(${Math.max(viewportSize.height - 80, 420)}px, 82vw)`,
+                      ? `min(${Math.max(viewportSize.height - 10, 240)}px, 92vw)`
+                      : `min(${Math.max(viewportSize.height - 20, 420)}px, 82vw)`,
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
