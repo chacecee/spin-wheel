@@ -8,6 +8,7 @@ import {
   authorizeDiscordUser,
   authenticateDiscordUser,
   getDiscordSdk,
+  subscribeToParticipants,
 } from "./discordSdk";
 
 function polarToCartesian(cx, cy, r, angleInDegrees) {
@@ -107,7 +108,16 @@ export default function App() {
       `/api/room-get?instanceId=${encodeURIComponent(instanceId)}`
     );
 
-    const data = await response.json();
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `API /api/room-get returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+      );
+    }
 
     if (!response.ok) {
       throw new Error(data?.error || data?.details || "Failed to fetch room");
@@ -129,7 +139,16 @@ export default function App() {
       }),
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `API /api/room-create-or-join returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+      );
+    }
 
     if (!response.ok) {
       throw new Error(
@@ -152,7 +171,16 @@ export default function App() {
       }),
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(
+        `API /api/room-update returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+      );
+    }
 
     if (!response.ok) {
       throw new Error(data?.error || data?.details || "Failed to update room");
@@ -243,6 +271,7 @@ export default function App() {
 
   useEffect(() => {
     if (!roomRef) return;
+    if (isBrowserMode) return;
 
     let cancelled = false;
 
@@ -275,7 +304,7 @@ export default function App() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [roomRef]);
+  }, [roomRef, isBrowserMode]);
 
 
   useEffect(() => {
@@ -345,27 +374,33 @@ export default function App() {
     if (isBrowserMode) return;
     if (!discordAuthUser) return;
 
+    let unsubscribe = null;
+    let cancelled = false;
+
+    function normalizeParticipants(result) {
+      if (Array.isArray(result)) return result;
+      if (Array.isArray(result?.participants)) return result.participants;
+      if (Array.isArray(result?.connected_participants)) return result.connected_participants;
+      return [];
+    }
+
     async function loadParticipants() {
       try {
         const result = await getConnectedParticipants();
 
+        if (cancelled) return;
+
         console.log("RAW getConnectedParticipants result:", result);
         setParticipantDebug(JSON.stringify(result, null, 2));
 
-        let participantsArray = [];
-
-        if (Array.isArray(result)) {
-          participantsArray = result;
-        } else if (Array.isArray(result?.participants)) {
-          participantsArray = result.participants;
-        } else if (Array.isArray(result?.connected_participants)) {
-          participantsArray = result.connected_participants;
-        }
+        const participantsArray = normalizeParticipants(result);
 
         console.log("Parsed connected participants:", participantsArray);
         setDiscordParticipants(participantsArray);
       } catch (error) {
         console.error("Failed to fetch connected participants:", error);
+        if (cancelled) return;
+
         setParticipantDebug(`FETCH ERROR: ${error?.message || "Unknown error"}`);
         setDebugMessage(
           `Failed to fetch connected participants: ${error?.message || "Unknown error"}`
@@ -373,8 +408,32 @@ export default function App() {
       }
     }
 
-    loadParticipants();
+    async function setupLiveParticipants() {
+      await loadParticipants();
 
+      unsubscribe = await subscribeToParticipants((event) => {
+        if (cancelled) return;
+
+        console.log("Participants update event:", event);
+        setParticipantDebug(JSON.stringify(event, null, 2));
+
+        const participantsArray = normalizeParticipants(event);
+        setDiscordParticipants(participantsArray);
+
+        loadParticipants().catch((error) => {
+          console.error("Reload after participant update failed:", error);
+        });
+      });
+    }
+
+    setupLiveParticipants();
+
+    return () => {
+      cancelled = true;
+      if (typeof unsubscribe === "function") {
+        unsubscribe();
+      }
+    };
   }, [sdkReady, isBrowserMode, discordAuthUser]);
 
   useEffect(() => {

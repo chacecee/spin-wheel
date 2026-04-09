@@ -1,4 +1,4 @@
-import { db, doc, getDoc } from "./_lib/serverFirebase";
+import { db, doc, getDoc } from "./_lib/serverFirebase.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

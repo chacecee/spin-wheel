@@ -1,4 +1,4 @@
-import { db, doc, getDoc, updateDoc } from "./_lib/serverFirebase";
+import { db, doc, getDoc, updateDoc } from "./_lib/serverFirebase.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
