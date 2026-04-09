@@ -2029,7 +2029,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "1.8%" : "10.5%",
+                      right: isShortLandscape ? "1.8%" : "6.6%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
@@ -2041,23 +2041,6 @@ export default function App() {
                       zIndex: 7,
                     }}
                   />
-
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: isShortLandscape ? "0.1%" : "8.8%",
-                      top: "50%",
-                      transform: "translateY(-50%) rotate(90deg)",
-                      width: "22px",
-                      height: "28px",
-                      borderRadius: "0 0 5px 5px",
-                      background:
-                        "linear-gradient(180deg, #fff3b5 0%, #d8a81f 48%, #8b580f 100%)",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
-                      zIndex: 6,
-                    }}
-                  />
-
                   <div
                     style={{
                       position: "absolute",
