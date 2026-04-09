@@ -76,6 +76,14 @@ function LoadingCard({
         border: "1px solid #334155",
         textAlign: "center",
         boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
+        width: "100%",
+        maxWidth:
+          window.innerWidth > window.innerHeight && window.innerHeight <= 500
+            ? "65vw"
+            : "760px",
+        marginLeft: "auto",
+        marginRight: "auto",
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -2029,7 +2037,7 @@ export default function App() {
                   <div
                     style={{
                       position: "absolute",
-                      right: isShortLandscape ? "1.8%" : "6.6%",
+                      right: isShortLandscape ? "1.8%" : "4%",
                       top: "50%",
                       transform: "translateY(-50%) rotate(90deg)",
                       width: 0,
