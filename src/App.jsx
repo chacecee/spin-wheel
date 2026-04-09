@@ -1820,33 +1820,35 @@ export default function App() {
           ) : (
             <>
               <div
-                style={{
-                  position: "relative",
-                  width: "100%",
-                  height: wheelStageHeight,
-                  minHeight: wheelStageHeight,
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  paddingTop: isShortLandscape ? "14px" : "10px",
-                  boxSizing: "border-box",
-                }}
-              >
+  style={{
+    position: "relative",
+    width: "100%",
+    height: wheelStageHeight,
+    minHeight: wheelStageHeight,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    overflow: "hidden",
+    paddingTop: isShortLandscape ? "14px" : "10px",
+    boxSizing: "border-box",
+    outline: "2px solid red",
+  }}
+>
                 <div
-                  style={{
-                    position: "relative",
-                    width:
-                      viewportSize.width > viewportSize.height
-                        ? "min(90vh, 84vw)"
-                        : "min(92vw, 92vh)",
-                    aspectRatio: "1 / 1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginTop: "0",
-                  }}
-                >
+  style={{
+    position: "relative",
+    width:
+      viewportSize.width > viewportSize.height
+        ? "min(90vh, 84vw)"
+        : "min(92vw, 92vh)",
+    aspectRatio: "1 / 1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: "0",
+    outline: "2px solid lime",
+  }}
+>
                   <div
                     style={{
                       position: "relative",
@@ -1861,13 +1863,14 @@ export default function App() {
                     }}
                   >
                     <svg
-                      width="100%"
-                      height="100%"
-                      viewBox={`0 0 ${wheelSize} ${wheelSize}`}
-                      style={{
-                        filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
-                      }}
-                    >
+  width="100%"
+  height="100%"
+  viewBox={`0 0 ${wheelSize} ${wheelSize}`}
+  style={{
+    filter: "drop-shadow(0 24px 48px rgba(0,0,0,0.42))",
+    outline: "2px solid cyan",
+  }}
+>
                       <defs>
                         <radialGradient id="rimPurpleGradient" cx="50%" cy="40%" r="70%">
                           <stop offset="0%" stopColor="#8e57d3" />
