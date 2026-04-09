@@ -162,7 +162,12 @@ export default function App() {
   const [authDebug, setAuthDebug] = useState("not started");
   const [discordAuthUser, setDiscordAuthUser] = useState(null);
 
+  const DEBUG_UI_ENABLED = false;
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [viewportSize, setViewportSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -347,6 +352,21 @@ export default function App() {
       clearTimeout(confettiTimer);
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    }
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -576,6 +596,9 @@ export default function App() {
   const participantNames = useMemo(() => {
     return participantList.map((participant) => participant.name);
   }, [participantList]);
+
+  const isShortLandscape =
+    viewportSize.width > viewportSize.height && viewportSize.height <= 500;
 
   const isHostResolved = Boolean(roomData && localUserId);
   const isHost = roomData?.hostId === localUserId;
@@ -1378,34 +1401,43 @@ export default function App() {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          justifyContent: stageIsWheel ? "flex-start" : "center",
-          padding: stageIsWheel ? "18px 18px 12px" : "24px",
+          justifyContent:
+            stageIsWheel || isShortLandscape ? "flex-start" : "center",
+          padding: stageIsWheel
+            ? isShortLandscape
+              ? "10px 12px 10px"
+              : "18px 18px 12px"
+            : isShortLandscape
+              ? "12px"
+              : "24px",
         }}
       >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: "960px",
-            marginBottom: "12px",
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <button
-            onClick={() => setShowDebugPanel((prev) => !prev)}
+        {DEBUG_UI_ENABLED && (
+          <div
             style={{
-              background: "rgba(7, 12, 24, 0.92)",
-              border: "1px solid rgba(255,255,255,0.14)",
-              color: "#d1d5db",
-              borderRadius: "6px",
-              padding: "8px 12px",
-              fontSize: "12px",
-              cursor: "pointer",
+              width: "100%",
+              maxWidth: "960px",
+              marginBottom: "12px",
+              display: "flex",
+              justifyContent: "flex-end",
             }}
           >
-            {showDebugPanel ? "Hide Debug" : "Show Debug"}
-          </button>
-        </div>
+            <button
+              onClick={() => setShowDebugPanel((prev) => !prev)}
+              style={{
+                background: "rgba(7, 12, 24, 0.92)",
+                border: "1px solid rgba(255,255,255,0.14)",
+                color: "#d1d5db",
+                borderRadius: "6px",
+                padding: "8px 12px",
+                fontSize: "12px",
+                cursor: "pointer",
+              }}
+            >
+              {showDebugPanel ? "Hide Debug" : "Show Debug"}
+            </button>
+          </div>
+        )}
 
         {showDebugPanel && (
           <div
@@ -1466,7 +1498,13 @@ export default function App() {
         <div
           style={{
             width: "100%",
-            maxWidth: stageIsWheel ? "1400px" : "760px",
+            maxWidth: stageIsWheel
+              ? isShortLandscape
+                ? "1200px"
+                : "1400px"
+              : isShortLandscape
+                ? "980px"
+                : "760px",
             position: "relative",
           }}
         >
@@ -1495,9 +1533,9 @@ export default function App() {
             <h1
               style={{
                 textAlign: "center",
-                fontSize: "32px",
+                fontSize: isShortLandscape ? "24px" : "32px",
                 fontWeight: "800",
-                marginBottom: "18px",
+                marginBottom: isShortLandscape ? "10px" : "18px",
                 marginTop: "0",
                 letterSpacing: "-0.03em",
               }}
@@ -1746,22 +1784,25 @@ export default function App() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  minHeight: "calc(100vh - 28px)",
+                  minHeight: isShortLandscape ? "calc(100vh - 10px)" : "calc(100vh - 28px)",
                   display: "flex",
-                  alignItems: "center",
+                  alignItems: isShortLandscape ? "flex-start" : "center",
                   justifyContent: "center",
                   overflow: "hidden",
+                  paddingTop: isShortLandscape ? "10px" : "0",
                 }}
               >
                 <div
                   style={{
                     position: "relative",
-                    width: "min(96vw, 90vh, 1120px)",
+                    width: isShortLandscape
+                      ? "min(92vw, 78vh, 820px)"
+                      : "min(96vw, 90vh, 1120px)",
                     aspectRatio: "1 / 1",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    marginTop: "6px",
+                    marginTop: isShortLandscape ? "0" : "6px",
                   }}
                 >
                   <div
@@ -2036,9 +2077,9 @@ export default function App() {
                       style={{
                         position: "absolute",
                         left: "50%",
-                        bottom: "7%",
+                        bottom: isShortLandscape ? "16%" : "7%",
                         transform: "translateX(-50%)",
-                        width: "min(72%, 560px)",
+                        width: isShortLandscape ? "min(76%, 500px)" : "min(72%, 560px)",
                         background: "rgba(7, 7, 10, 0.95)",
                         border: `1px solid ${GOLD_DARK}`,
                         borderRadius: "5px",
