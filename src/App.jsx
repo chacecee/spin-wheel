@@ -1508,7 +1508,7 @@ export default function App() {
                 ? "1200px"
                 : "1600px"
               : isShortLandscape
-                ? "860px"
+                ? "920px"
                 : "760px",
             position: "relative",
             overflow: "visible",
@@ -1804,12 +1804,12 @@ export default function App() {
                 style={{
                   position: "relative",
                   width: "100%",
-                  minHeight: isShortLandscape ? "calc(100vh - 6px)" : "calc(100vh - 16px)",
+                  minHeight: isShortLandscape ? "calc(100vh - 26px)" : "calc(100vh - 26px)",
                   display: "flex",
                   alignItems: isShortLandscape ? "flex-start" : "center",
                   justifyContent: "center",
                   overflow: "hidden",
-                  paddingTop: isShortLandscape ? "2px" : "0",
+                  paddingTop: "0",
                 }}
               >
                 <div
@@ -2097,8 +2097,8 @@ export default function App() {
                       style={{
                         position: "relative",
                         width: isShortLandscape
-                          ? "min(102vw, 700px)"
-                          : "min(78vw, 860px)",
+                          ? "min(78vh, 92vw)"
+                          : "min(72vw, 820px)",
                         aspectRatio: "1 / 1",
                         display: "flex",
                         alignItems: "center",
