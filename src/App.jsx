@@ -61,6 +61,86 @@ function normalizeDegrees(value) {
   return ((value % 360) + 360) % 360;
 }
 
+function LoadingCard({
+  title,
+  subtitle,
+  showFakeProgress = false,
+}) {
+  return (
+    <div
+      style={{
+        marginTop: "20px",
+        padding: "22px",
+        borderRadius: "8px",
+        background: "#091833",
+        border: "1px solid #334155",
+        textAlign: "center",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.22)",
+      }}
+    >
+      <div
+        style={{
+          width: "42px",
+          height: "42px",
+          margin: "0 auto 14px",
+          borderRadius: "999px",
+          border: "3px solid rgba(255,255,255,0.14)",
+          borderTopColor: "#a78bfa",
+          animation: "wheelSpinner 0.85s linear infinite",
+        }}
+      />
+
+      <div
+        style={{
+          fontSize: "18px",
+          fontWeight: "700",
+          marginBottom: "8px",
+          color: "#ffffff",
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          fontSize: "14px",
+          color: "rgba(255,255,255,0.72)",
+          maxWidth: "520px",
+          margin: "0 auto",
+          lineHeight: 1.5,
+        }}
+      >
+        {subtitle}
+      </div>
+
+      {showFakeProgress ? (
+        <div
+          style={{
+            margin: "16px auto 0",
+            width: "100%",
+            maxWidth: "360px",
+            height: "8px",
+            borderRadius: "999px",
+            overflow: "hidden",
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          <div
+            style={{
+              width: "35%",
+              height: "100%",
+              borderRadius: "999px",
+              background: "linear-gradient(90deg, #6d28d9 0%, #a78bfa 100%)",
+              animation: "wheelProgressSlide 1.2s ease-in-out infinite",
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default function App() {
   const [roomData, setRoomData] = useState(null);
   const [debugMessage, setDebugMessage] = useState("Starting connection...");
@@ -299,7 +379,7 @@ export default function App() {
 
     loadRoom();
 
-    const interval = setInterval(loadRoom, 1000);
+    const interval = setInterval(loadRoom, 350);
 
     return () => {
       cancelled = true;
@@ -750,9 +830,7 @@ export default function App() {
     roomData?.winnerIndex,
     roomData?.resultRotation,
     roomData?.spinDurationMs,
-    roomData,
   ]);
-
   function handleModeChange(nextMode) {
     if (!isHost) return;
 
@@ -1087,6 +1165,20 @@ export default function App() {
           "linear-gradient(180deg, #09111f 0%, #0a1324 35%, #090d15 70%, #05070c 100%)",
       }}
     >
+
+      <style>
+        {`
+    @keyframes wheelSpinner {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes wheelProgressSlide {
+      0% { transform: translateX(-120%); }
+      100% { transform: translateX(320%); }
+    }
+  `}
+      </style>
       <audio ref={tadaAudioRef} src="/tada.mp3" preload="auto" />
       <audio ref={spinAudioRef} src="/spin.mp3" preload="auto" />
       <audio ref={introAudioRef} src="/gamesound.mp3" preload="auto" />
@@ -1417,36 +1509,11 @@ export default function App() {
           {phase === "editing" ? (
             <>
               {!isHostResolved ? (
-                <div
-                  style={{
-                    marginTop: "20px",
-                    padding: "20px",
-                    borderRadius: "5px",
-                    background: "#091833",
-                    border: "1px solid #334155",
-                    textAlign: "center",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "18px",
-                      fontWeight: "700",
-                      marginBottom: "8px",
-                      color: "#ffffff",
-                    }}
-                  >
-                    Loading wheel setup...
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: "14px",
-                      color: "rgba(255,255,255,0.72)",
-                    }}
-                  >
-                    Connecting to your Discord activity session.
-                  </div>
-                </div>
+                <LoadingCard
+                  title="Loading wheel setup..."
+                  subtitle="Connecting to your Discord activity session."
+                  showFakeProgress={true}
+                />
               ) : isHost ? (
                 <div
                   style={{
@@ -1666,17 +1733,11 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <div
-                  style={{
-                    marginTop: "20px",
-                    padding: "16px",
-                    borderRadius: "5px",
-                    background: "#091833",
-                    border: "1px solid #334155",
-                  }}
-                >
-                  Host is currently setting up the wheel.
-                </div>
+                <LoadingCard
+                  title="Your host is setting up the wheel"
+                  subtitle="Your host is currently setting up the wheel entries. Please give them a moment..."
+                  showFakeProgress={false}
+                />
               )}
             </>
           ) : (
