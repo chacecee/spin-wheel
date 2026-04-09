@@ -190,6 +190,10 @@ export default function App() {
   const draftSyncTimeoutRef = useRef(null);
   const previousHostIdRef = useRef(null);
 
+  const hostEditSessionRef = useRef("");
+  const joinerEntriesScrollRef = useRef(null);
+  const previousJoinerEntryCountRef = useRef(0);
+
   const roomRef = useMemo(() => {
     if (!discordInstanceId) return null;
     return discordInstanceId;
@@ -637,7 +641,7 @@ export default function App() {
     return () => clearTimeout(timeout);
   }, [debugMessage]);
 
-  
+
 
   const participantsMap = roomData?.participants || {};
 
@@ -684,6 +688,7 @@ export default function App() {
   useEffect(() => {
     if (phase !== "editing") {
       setIsGoingToSpinner(false);
+      hostEditSessionRef.current = "";
     }
   }, [phase]);
 
@@ -700,18 +705,18 @@ export default function App() {
     const modeFromRoom = roomData.mode || "custom";
     const entriesFromRoom = roomData.entries || [];
 
-    const hydrationKey = JSON.stringify({
+    const sessionKey = JSON.stringify({
       hostId: roomData.hostId || "",
       phase,
       mode: modeFromRoom,
-      entries: entriesFromRoom,
     });
 
-    if (lastEditHydrationKeyRef.current === hydrationKey) {
+    if (hostEditSessionRef.current === sessionKey) {
       return;
     }
 
-    lastEditHydrationKeyRef.current = hydrationKey;
+    hostEditSessionRef.current = sessionKey;
+    lastEditHydrationKeyRef.current = sessionKey;
 
     setDraftMode(modeFromRoom);
 
@@ -733,7 +738,7 @@ export default function App() {
     }
 
     setSelectedHostId("");
-  }, [roomData, isHost, phase, participantNames]);
+  }, [roomData?.hostId, roomData?.mode, phase, isHost, participantNames, roomData?.entries]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -770,6 +775,21 @@ export default function App() {
       }
     };
   }, [roomRef, isHost, phase, draftEntries, draftMode, roomData?.entries]);
+
+  useEffect(() => {
+    if (phase !== "editing") return;
+    if (isHost) return;
+
+    const nextCount = roomData?.entries?.length || 0;
+    const prevCount = previousJoinerEntryCountRef.current;
+
+    if (nextCount > prevCount && joinerEntriesScrollRef.current) {
+      joinerEntriesScrollRef.current.scrollTop =
+        joinerEntriesScrollRef.current.scrollHeight;
+    }
+
+    previousJoinerEntryCountRef.current = nextCount;
+  }, [roomData?.entries, phase, isHost]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -2123,6 +2143,7 @@ export default function App() {
                     </div>
 
                     <div
+                      ref={joinerEntriesScrollRef}
                       style={{
                         maxHeight: isShortLandscape ? "none" : "198px",
                         overflowY: isShortLandscape ? "visible" : "auto",
