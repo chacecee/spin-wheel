@@ -187,6 +187,9 @@ export default function App() {
   const lastEditHydrationKeyRef = useRef("");
   const previousParticipantNamesRef = useRef([]);
 
+  const draftSyncTimeoutRef = useRef(null);
+  const previousHostIdRef = useRef(null);
+
   const roomRef = useMemo(() => {
     if (!discordInstanceId) return null;
     return discordInstanceId;
@@ -620,7 +623,12 @@ export default function App() {
 
   useEffect(() => {
     if (!debugMessage) return;
-    if (!debugMessage.includes("has joined")) return;
+
+    const shouldAutoClear =
+      debugMessage.includes("has joined") ||
+      debugMessage.includes("has assigned you as host");
+
+    if (!shouldAutoClear) return;
 
     const timeout = setTimeout(() => {
       setDebugMessage("");
@@ -628,6 +636,26 @@ export default function App() {
 
     return () => clearTimeout(timeout);
   }, [debugMessage]);
+
+  useEffect(() => {
+    if (!roomData?.hostId) return;
+    if (!localUserId) return;
+
+    const previousHostId = previousHostIdRef.current;
+
+    if (
+      previousHostId &&
+      previousHostId !== roomData.hostId &&
+      roomData.hostId === localUserId
+    ) {
+      const previousHostName =
+        participantsMap[previousHostId]?.name || "A participant";
+
+      setDebugMessage(`${previousHostName} has assigned you as host.`);
+    }
+
+    previousHostIdRef.current = roomData.hostId;
+  }, [roomData?.hostId, localUserId, participantsMap]);
 
   const participantsMap = roomData?.participants || {};
 
@@ -704,6 +732,42 @@ export default function App() {
 
     setSelectedHostId("");
   }, [roomData, isHost, phase, participantNames]);
+
+  useEffect(() => {
+    if (!roomRef) return;
+    if (!isHost) return;
+    if (phase !== "editing") return;
+
+    const cleanedEntries = draftEntries.map((entry) => entry ?? "");
+    const roomEntries = roomData?.entries || [];
+
+    const sameEntries =
+      JSON.stringify(cleanedEntries) === JSON.stringify(roomEntries);
+
+    if (sameEntries) return;
+
+    if (draftSyncTimeoutRef.current) {
+      clearTimeout(draftSyncTimeoutRef.current);
+    }
+
+    draftSyncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await updateRoomViaApi(roomRef, {
+          mode: draftMode,
+          entries: cleanedEntries,
+        });
+      } catch (error) {
+        console.error("Live draft sync failed:", error);
+      }
+    }, 180);
+
+    return () => {
+      if (draftSyncTimeoutRef.current) {
+        clearTimeout(draftSyncTimeoutRef.current);
+        draftSyncTimeoutRef.current = null;
+      }
+    };
+  }, [roomRef, isHost, phase, draftEntries, draftMode, roomData?.entries]);
 
   useEffect(() => {
     if (!roomRef) return;
