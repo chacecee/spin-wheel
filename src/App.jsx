@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import confetti from "canvas-confetti";
 import {
@@ -32,13 +32,7 @@ function describeArcSlice(cx, cy, r, startAngle, endAngle) {
   ].join(" ");
 }
 
-const COLORED_SLICES = [
-  "#e44444",
-  "#f3ab08",
-  "#279373",
-  "#317bc5",
-  "#ce3978",
-];
+const COLORED_SLICES = ["#e44444", "#f3ab08", "#279373", "#317bc5", "#ce3978"];
 
 const OFF_WHITE_SLICE = "#d8d4c8";
 const OFF_WHITE_TEXT = "#1f1a17";
@@ -61,11 +55,15 @@ function normalizeDegrees(value) {
   return ((value % 360) + 360) % 360;
 }
 
-function LoadingCard({
-  title,
-  subtitle,
-  showFakeProgress = false,
-}) {
+function getRoomPollInterval(phase, isPageVisible) {
+  if (!isPageVisible) return 10000;
+  if (phase === "spinning") return 900;
+  if (phase === "ready") return 2500;
+  if (phase === "result") return 3000;
+  return 4000;
+}
+
+function LoadingCard({ title, subtitle, showFakeProgress = false }) {
   return (
     <div
       style={{
@@ -177,6 +175,7 @@ export default function App() {
     width: window.visualViewport?.width || window.innerWidth,
     height: window.visualViewport?.height || window.innerHeight,
   });
+  const [isPageVisible, setIsPageVisible] = useState(!document.hidden);
 
   const tadaAudioRef = useRef(null);
   const spinAudioRef = useRef(null);
@@ -184,12 +183,8 @@ export default function App() {
   const celebratedSpinRef = useRef(null);
   const spinFadeIntervalRef = useRef(null);
   const spinStopTimeoutRef = useRef(null);
-  const lastEditHydrationKeyRef = useRef("");
   const previousParticipantNamesRef = useRef([]);
-
-  const draftSyncTimeoutRef = useRef(null);
   const previousHostIdRef = useRef(null);
-
   const hostEditSessionRef = useRef("");
   const joinerEntriesScrollRef = useRef(null);
   const previousJoinerEntryCountRef = useRef(0);
@@ -202,9 +197,7 @@ export default function App() {
   const localUserId = discordAuthUser?.id || null;
 
   const localDisplayName =
-    discordAuthUser?.global_name ||
-    discordAuthUser?.username ||
-    "Player";
+    discordAuthUser?.global_name || discordAuthUser?.username || "Player";
 
   async function fetchRoomFromApi(instanceId) {
     const response = await fetch(
@@ -218,7 +211,10 @@ export default function App() {
       data = JSON.parse(rawText);
     } catch {
       throw new Error(
-        `API /api/room-get returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+        `API /api/room-get returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(
+          0,
+          120
+        )}`
       );
     }
 
@@ -229,7 +225,11 @@ export default function App() {
     return data;
   }
 
-  async function createOrJoinRoomViaApi(instanceId, participantId, participantName) {
+  async function createOrJoinRoomViaApi(
+    instanceId,
+    participantId,
+    participantName
+  ) {
     const response = await fetch("/api/room-create-or-join", {
       method: "POST",
       headers: {
@@ -249,7 +249,9 @@ export default function App() {
       data = JSON.parse(rawText);
     } catch {
       throw new Error(
-        `API /api/room-create-or-join returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+        `API /api/room-create-or-join returned non-JSON. Status ${
+          response.status
+        }. First response text: ${rawText.slice(0, 120)}`
       );
     }
 
@@ -281,7 +283,9 @@ export default function App() {
       data = JSON.parse(rawText);
     } catch {
       throw new Error(
-        `API /api/room-update returned non-JSON. Status ${response.status}. First response text: ${rawText.slice(0, 120)}`
+        `API /api/room-update returned non-JSON. Status ${
+          response.status
+        }. First response text: ${rawText.slice(0, 120)}`
       );
     }
 
@@ -291,6 +295,99 @@ export default function App() {
 
     return data;
   }
+
+  const applyIncomingRoom = useCallback((nextRoom) => {
+    if (nextRoom) {
+      setRoomData(nextRoom);
+
+      const nextParticipantNames = Object.values(nextRoom.participants || {}).map(
+        (participant) => participant?.name || "Someone"
+      );
+
+      const previousNames = previousParticipantNamesRef.current;
+      const joinedNames = nextParticipantNames.filter(
+        (name) => !previousNames.includes(name)
+      );
+
+      if (previousNames.length > 0 && joinedNames.length > 0) {
+        setDebugMessage(
+          joinedNames.length === 1
+            ? `${joinedNames[0]} has joined.`
+            : `${joinedNames.join(", ")} have joined.`
+        );
+      }
+
+      previousParticipantNamesRef.current = nextParticipantNames;
+    } else {
+      setRoomData(null);
+      setDebugMessage("Room document does not exist yet.");
+      previousParticipantNamesRef.current = [];
+    }
+  }, []);
+
+  const refreshRoomFromServer = useCallback(async () => {
+    if (!roomRef) return null;
+
+    const data = await fetchRoomFromApi(roomRef);
+    const nextRoom = data?.room || null;
+    applyIncomingRoom(nextRoom);
+    return nextRoom;
+  }, [roomRef, applyIncomingRoom]);
+
+  const participantsMap = roomData?.participants || {};
+
+  const participantList = useMemo(() => {
+    return Object.entries(participantsMap).map(([id, value]) => ({
+      id,
+      name: value?.name || id,
+    }));
+  }, [participantsMap]);
+
+  const participantNames = useMemo(() => {
+    return participantList.map((participant) => participant.name);
+  }, [participantList]);
+
+  const isShortLandscape =
+    viewportSize.width > viewportSize.height && viewportSize.height <= 500;
+
+  const isHostResolved = Boolean(roomData && localUserId);
+  const isHost = roomData?.hostId === localUserId;
+  const phase = roomData?.phase || "editing";
+  const currentEntries = roomData?.entries || [];
+  const winnerIndex = roomData?.winnerIndex;
+
+  const persistDraftToRoom = useCallback(
+    async (entriesToPersist = draftEntries, modeToPersist = draftMode) => {
+      if (!roomRef) return;
+      if (!isHost) return;
+      if (phase !== "editing") return;
+
+      const normalizedEntries = entriesToPersist.map((entry) => entry ?? "");
+      const roomEntries = roomData?.entries || [];
+      const roomMode = roomData?.mode || "custom";
+
+      const sameEntries =
+        JSON.stringify(normalizedEntries) === JSON.stringify(roomEntries);
+      const sameMode = modeToPersist === roomMode;
+
+      if (sameEntries && sameMode) return;
+
+      try {
+        const result = await updateRoomViaApi(roomRef, {
+          mode: modeToPersist,
+          entries: normalizedEntries,
+        });
+
+        if (result?.room) {
+          applyIncomingRoom(result.room);
+        }
+      } catch (error) {
+        console.error("Draft sync failed:", error);
+        setDebugMessage(`Failed to sync changes: ${error.message}`);
+      }
+    },
+    [roomRef, isHost, phase, draftEntries, draftMode, roomData, applyIncomingRoom]
+  );
 
   useEffect(() => {
     async function initDiscord() {
@@ -322,12 +419,16 @@ export default function App() {
           setDiscordInstanceId(sdk.instanceId);
           setDebugMessage(`SDK ready. Instance ID: ${sdk.instanceId}`);
         } else {
-          setDebugMessage("Discord SDK connected, but no instance ID was found.");
+          setDebugMessage(
+            "Discord SDK connected, but no instance ID was found."
+          );
         }
       } catch (error) {
         console.error("Discord SDK failed to initialize:", error);
         setDebugMessage(
-          `Discord SDK failed to initialize: ${error?.message || "Unknown error"}`
+          `Discord SDK failed to initialize: ${
+            error?.message || "Unknown error"
+          }`
         );
       }
     }
@@ -335,13 +436,12 @@ export default function App() {
     initDiscord();
   }, []);
 
-
   useEffect(() => {
     try {
       if (introAudioRef.current) {
         introAudioRef.current.currentTime = 0;
         introAudioRef.current.volume = 0.8;
-        introAudioRef.current.play().catch(() => { });
+        introAudioRef.current.play().catch(() => {});
       }
     } catch (error) {
       console.error("Intro audio failed:", error);
@@ -392,6 +492,18 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    function handleVisibilityChange() {
+      setIsPageVisible(!document.hidden);
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!roomRef) return;
     if (isBrowserMode) return;
 
@@ -403,49 +515,27 @@ export default function App() {
 
         if (cancelled) return;
 
-        if (data?.room) {
-          setRoomData(data.room);
-
-          const nextParticipantNames = Object.values(data.room.participants || {}).map(
-            (participant) => participant?.name || "Someone"
-          );
-
-          const previousNames = previousParticipantNamesRef.current;
-          const joinedNames = nextParticipantNames.filter(
-            (name) => !previousNames.includes(name)
-          );
-
-          if (previousNames.length > 0 && joinedNames.length > 0) {
-            setDebugMessage(
-              joinedNames.length === 1
-                ? `${joinedNames[0]} has joined.`
-                : `${joinedNames.join(", ")} have joined.`
-            );
-          }
-
-          previousParticipantNamesRef.current = nextParticipantNames;
-        } else {
-          setRoomData(null);
-          setDebugMessage("Room document does not exist yet.");
-        }
+        applyIncomingRoom(data?.room || null);
       } catch (error) {
-        console.error("Room poll failed:", error);
+        console.error("Room refresh failed:", error);
         if (!cancelled) {
-          setDebugMessage(`Room poll failed: ${error?.message || "Unknown error"}`);
+          setDebugMessage(
+            `Room refresh failed: ${error?.message || "Unknown error"}`
+          );
         }
       }
     }
 
     loadRoom();
 
-    const interval = setInterval(loadRoom, 350);
+    const intervalMs = getRoomPollInterval(phase, isPageVisible);
+    const interval = setInterval(loadRoom, intervalMs);
 
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [roomRef, isBrowserMode]);
-
+  }, [roomRef, isBrowserMode, phase, isPageVisible, applyIncomingRoom]);
 
   useEffect(() => {
     if (!sdkReady) return;
@@ -479,8 +569,8 @@ export default function App() {
         if (!tokenResponse.ok) {
           throw new Error(
             tokenData?.error_description ||
-            tokenData?.error ||
-            "Token exchange failed"
+              tokenData?.error ||
+              "Token exchange failed"
           );
         }
 
@@ -498,7 +588,11 @@ export default function App() {
 
         setDiscordAuthUser(authUser?.user || null);
         setAuthDebug(
-          `Authenticated as ${authUser?.user?.username || authUser?.user?.global_name || "unknown user"}`
+          `Authenticated as ${
+            authUser?.user?.username ||
+            authUser?.user?.global_name ||
+            "unknown user"
+          }`
         );
       } catch (error) {
         console.error("Discord auth failed:", error);
@@ -520,7 +614,8 @@ export default function App() {
     function normalizeParticipants(result) {
       if (Array.isArray(result)) return result;
       if (Array.isArray(result?.participants)) return result.participants;
-      if (Array.isArray(result?.connected_participants)) return result.connected_participants;
+      if (Array.isArray(result?.connected_participants))
+        return result.connected_participants;
       return [];
     }
 
@@ -543,7 +638,9 @@ export default function App() {
 
         setParticipantDebug(`FETCH ERROR: ${error?.message || "Unknown error"}`);
         setDebugMessage(
-          `Failed to fetch connected participants: ${error?.message || "Unknown error"}`
+          `Failed to fetch connected participants: ${
+            error?.message || "Unknown error"
+          }`
         );
       }
     }
@@ -551,7 +648,7 @@ export default function App() {
     async function setupLiveParticipants() {
       await loadParticipants();
 
-      unsubscribe = await subscribeToParticipants((event) => {
+      unsubscribe = await subscribeToParticipants(async (event) => {
         if (cancelled) return;
 
         console.log("Participants update event:", event);
@@ -563,6 +660,12 @@ export default function App() {
         loadParticipants().catch((error) => {
           console.error("Reload after participant update failed:", error);
         });
+
+        if (roomRef) {
+          refreshRoomFromServer().catch((error) => {
+            console.error("Room refresh after participant update failed:", error);
+          });
+        }
       });
     }
 
@@ -574,7 +677,7 @@ export default function App() {
         unsubscribe();
       }
     };
-  }, [sdkReady, isBrowserMode, discordAuthUser]);
+  }, [sdkReady, isBrowserMode, discordAuthUser, roomRef, refreshRoomFromServer]);
 
   useEffect(() => {
     if (!roomRef) return;
@@ -585,9 +688,7 @@ export default function App() {
     async function createOrJoinRoom() {
       try {
         const participantName =
-          discordAuthUser.global_name ||
-          discordAuthUser.username ||
-          "Player";
+          discordAuthUser.global_name || discordAuthUser.username || "Player";
 
         const result = await createOrJoinRoomViaApi(
           roomRef,
@@ -598,7 +699,7 @@ export default function App() {
         if (cancelled) return;
 
         if (result?.room) {
-          setRoomData(result.room);
+          applyIncomingRoom(result.room);
         }
 
         if (result?.created) {
@@ -621,9 +722,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [roomRef, discordAuthUser]);
-
-
+  }, [roomRef, discordAuthUser, applyIncomingRoom]);
 
   useEffect(() => {
     if (!debugMessage) return;
@@ -640,10 +739,6 @@ export default function App() {
 
     return () => clearTimeout(timeout);
   }, [debugMessage]);
-
-
-
-  const participantsMap = roomData?.participants || {};
 
   useEffect(() => {
     if (!roomData?.hostId) return;
@@ -664,26 +759,6 @@ export default function App() {
 
     previousHostIdRef.current = roomData.hostId;
   }, [roomData?.hostId, localUserId, participantsMap]);
-
-  const participantList = useMemo(() => {
-    return Object.entries(participantsMap).map(([id, value]) => ({
-      id,
-      name: value?.name || id,
-    }));
-  }, [participantsMap]);
-
-  const participantNames = useMemo(() => {
-    return participantList.map((participant) => participant.name);
-  }, [participantList]);
-
-  const isShortLandscape =
-    viewportSize.width > viewportSize.height && viewportSize.height <= 500;
-
-  const isHostResolved = Boolean(roomData && localUserId);
-  const isHost = roomData?.hostId === localUserId;
-  const phase = roomData?.phase || "editing";
-  const currentEntries = roomData?.entries || [];
-  const winnerIndex = roomData?.winnerIndex;
 
   useEffect(() => {
     if (phase !== "editing") {
@@ -716,7 +791,6 @@ export default function App() {
     }
 
     hostEditSessionRef.current = sessionKey;
-    lastEditHydrationKeyRef.current = sessionKey;
 
     setDraftMode(modeFromRoom);
 
@@ -739,42 +813,6 @@ export default function App() {
 
     setSelectedHostId("");
   }, [roomData?.hostId, roomData?.mode, phase, isHost, participantNames, roomData?.entries]);
-
-  useEffect(() => {
-    if (!roomRef) return;
-    if (!isHost) return;
-    if (phase !== "editing") return;
-
-    const cleanedEntries = draftEntries.map((entry) => entry ?? "");
-    const roomEntries = roomData?.entries || [];
-
-    const sameEntries =
-      JSON.stringify(cleanedEntries) === JSON.stringify(roomEntries);
-
-    if (sameEntries) return;
-
-    if (draftSyncTimeoutRef.current) {
-      clearTimeout(draftSyncTimeoutRef.current);
-    }
-
-    draftSyncTimeoutRef.current = setTimeout(async () => {
-      try {
-        await updateRoomViaApi(roomRef, {
-          mode: draftMode,
-          entries: cleanedEntries,
-        });
-      } catch (error) {
-        console.error("Live draft sync failed:", error);
-      }
-    }, 180);
-
-    return () => {
-      if (draftSyncTimeoutRef.current) {
-        clearTimeout(draftSyncTimeoutRef.current);
-        draftSyncTimeoutRef.current = null;
-      }
-    };
-  }, [roomRef, isHost, phase, draftEntries, draftMode, roomData?.entries]);
 
   useEffect(() => {
     if (phase !== "editing") return;
@@ -810,7 +848,7 @@ export default function App() {
         });
 
         if (result?.room) {
-          setRoomData(result.room);
+          applyIncomingRoom(result.room);
         }
       } catch (error) {
         console.error("Failed to finish spin:", error);
@@ -826,6 +864,7 @@ export default function App() {
     phase,
     roomData?.spinStartedAt,
     roomData?.spinDurationMs,
+    applyIncomingRoom,
   ]);
 
   useEffect(() => {
@@ -886,7 +925,7 @@ export default function App() {
 
           const playPromise = spinAudio.play();
           if (playPromise?.catch) {
-            playPromise.catch(() => { });
+            playPromise.catch(() => {});
           }
 
           const fadeStartMs = Math.max(spinDuration - 1200, 0);
@@ -897,7 +936,10 @@ export default function App() {
 
             const fadeDuration = Math.max(stopEarlyMs - fadeStartMs, 1);
             const fadeSteps = 12;
-            const fadeStepMs = Math.max(Math.floor(fadeDuration / fadeSteps), 30);
+            const fadeStepMs = Math.max(
+              Math.floor(fadeDuration / fadeSteps),
+              30
+            );
             let currentStep = 0;
 
             spinFadeIntervalRef.current = setInterval(() => {
@@ -978,7 +1020,7 @@ export default function App() {
       if (tadaAudioRef.current) {
         tadaAudioRef.current.pause();
         tadaAudioRef.current.currentTime = 0;
-        tadaAudioRef.current.play().catch(() => { });
+        tadaAudioRef.current.play().catch(() => {});
       }
     } catch (error) {
       console.error("Tada audio play failed:", error);
@@ -996,21 +1038,26 @@ export default function App() {
     roomData?.resultRotation,
     roomData?.spinDurationMs,
   ]);
+
   function handleModeChange(nextMode) {
     if (!isHost) return;
 
     setDraftMode(nextMode);
 
+    let nextEntries;
+
     if (nextMode === "participants") {
-      const limitedParticipants = participantNames.slice(0, 20);
-      setDraftEntries(limitedParticipants);
+      nextEntries = participantNames.slice(0, 20);
 
       if (participantNames.length > 20) {
         setDebugMessage("Only the first 20 participants will be used.");
       }
     } else {
-      setDraftEntries(["", "", ""]);
+      nextEntries = ["", "", ""];
     }
+
+    setDraftEntries(nextEntries);
+    persistDraftToRoom(nextEntries, nextMode);
   }
 
   function handleEntryChange(index, newValue) {
@@ -1021,6 +1068,17 @@ export default function App() {
     setDraftEntries(updatedEntries);
   }
 
+  function handleEntryBlur() {
+    if (!isHost) return;
+    persistDraftToRoom(draftEntries, draftMode);
+  }
+
+  function handleEntryKeyDown(event) {
+    if (event.key === "Enter") {
+      event.currentTarget.blur();
+    }
+  }
+
   function handleAddDraftEntry() {
     if (!isHost) return;
 
@@ -1029,14 +1087,19 @@ export default function App() {
       return;
     }
 
-    setDraftEntries([...draftEntries, ""]);
+    const nextEntries = [...draftEntries, ""];
+    setDraftEntries(nextEntries);
+    persistDraftToRoom(nextEntries, draftMode);
   }
 
   function handleRemoveDraftEntry(indexToRemove) {
     if (!isHost) return;
 
-    const updatedEntries = draftEntries.filter((_, index) => index !== indexToRemove);
+    const updatedEntries = draftEntries.filter(
+      (_, index) => index !== indexToRemove
+    );
     setDraftEntries(updatedEntries);
+    persistDraftToRoom(updatedEntries, draftMode);
   }
 
   async function handleSaveSetup() {
@@ -1053,11 +1116,13 @@ export default function App() {
 
     if (cleanedEntries.length > 20) {
       setDebugMessage("Please keep the wheel to 20 entries or fewer.");
+      setIsGoingToSpinner(false);
       return;
     }
 
     if (cleanedEntries.length < 2) {
       setDebugMessage("Please keep at least 2 entries before saving.");
+      setIsGoingToSpinner(false);
       return;
     }
 
@@ -1071,7 +1136,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setDebugMessage("Setup saved.");
@@ -1094,7 +1159,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setDebugMessage("Returned to edit mode.");
@@ -1121,7 +1186,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setDebugMessage("Host transferred successfully.");
@@ -1154,10 +1219,13 @@ export default function App() {
     const baseNormalized = normalizeDegrees(baseRotation);
     const extraTurns = 360 * 6;
 
-    const targetOffset = nextWinnerIndex * localSliceAngle + localSliceAngle / 2;
+    const targetOffset =
+      nextWinnerIndex * localSliceAngle + localSliceAngle / 2;
     const pointerAngle = 90;
     const desiredFinalNormalized = normalizeDegrees(pointerAngle - targetOffset);
-    const deltaToTarget = normalizeDegrees(desiredFinalNormalized - baseNormalized);
+    const deltaToTarget = normalizeDegrees(
+      desiredFinalNormalized - baseNormalized
+    );
     const nextRotation = baseRotation + extraTurns + deltaToTarget;
 
     const spinDurationMs = 5000;
@@ -1173,7 +1241,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setDebugMessage("Spin started.");
@@ -1181,8 +1249,6 @@ export default function App() {
       console.error("Failed to spin:", error);
       setDebugMessage(`Failed to spin: ${error.message}`);
     }
-
-
   }
 
   async function handleKeepSpinning() {
@@ -1209,7 +1275,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setRemoveWinnerNextSpin(false);
@@ -1225,7 +1291,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setRemoveWinnerNextSpin(false);
@@ -1262,7 +1328,7 @@ export default function App() {
       });
 
       if (result?.room) {
-        setRoomData(result.room);
+        applyIncomingRoom(result.room);
       }
 
       setRemoveWinnerNextSpin(false);
@@ -1336,6 +1402,7 @@ export default function App() {
     padding: 0,
     boxShadow: "none",
   };
+
   return (
     <div
       className="app"
@@ -1351,7 +1418,6 @@ export default function App() {
           "linear-gradient(180deg, #09111f 0%, #0a1324 35%, #090d15 70%, #05070c 100%)",
       }}
     >
-
       <style>
         {`
     @keyframes wheelSpinner {
@@ -1619,26 +1685,55 @@ export default function App() {
               lineHeight: 1.5,
             }}
           >
-            <div><strong>instanceId</strong> — {discordInstanceId || "none"}</div>
-            <div><strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}</div>
-            <div><strong>browser mode</strong> — {isBrowserMode ? "yes" : "no"}</div>
-            <div><strong>channelId</strong> — {String(getDiscordSdk()?.channelId || "none")}</div>
-            <div><strong>guildId</strong> — {String(getDiscordSdk()?.guildId || "none")}</div>
-            <div><strong>auth user id</strong> — {discordAuthUser?.id || "none"}</div>
-            <div><strong>discord participants</strong> — {discordParticipants.length}</div>
-            <div><strong>local user id</strong> — {localUserId}</div>
+            <div>
+              <strong>instanceId</strong> — {discordInstanceId || "none"}
+            </div>
+            <div>
+              <strong>sdkReady</strong> — {sdkReady ? "yes" : "no"}
+            </div>
+            <div>
+              <strong>browser mode</strong> — {isBrowserMode ? "yes" : "no"}
+            </div>
+            <div>
+              <strong>channelId</strong> —{" "}
+              {String(getDiscordSdk()?.channelId || "none")}
+            </div>
+            <div>
+              <strong>guildId</strong> —{" "}
+              {String(getDiscordSdk()?.guildId || "none")}
+            </div>
+            <div>
+              <strong>auth user id</strong> — {discordAuthUser?.id || "none"}
+            </div>
+            <div>
+              <strong>discord participants</strong> — {discordParticipants.length}
+            </div>
+            <div>
+              <strong>local user id</strong> — {localUserId}
+            </div>
             <div>
               <strong>participant names</strong> —{" "}
               {discordParticipants.length > 0
                 ? discordParticipants
-                  .map((p) => p.global_name || p.username || p.id || "unknown")
-                  .join(", ")
+                    .map((p) => p.global_name || p.username || p.id || "unknown")
+                    .join(", ")
                 : "none"}
             </div>
-            <div><strong>debug</strong> — {debugMessage}</div>
-            <div><strong>render checkpoint</strong> — {renderCheckpoint}</div>
-            <div><strong>auth debug</strong> — {authDebug}</div>
-            <div><strong>authed user</strong> — {discordAuthUser?.username || discordAuthUser?.global_name || "none"}</div>
+            <div>
+              <strong>debug</strong> — {debugMessage}
+            </div>
+            <div>
+              <strong>render checkpoint</strong> — {renderCheckpoint}
+            </div>
+            <div>
+              <strong>auth debug</strong> — {authDebug}
+            </div>
+            <div>
+              <strong>authed user</strong> —{" "}
+              {discordAuthUser?.username ||
+                discordAuthUser?.global_name ||
+                "none"}
+            </div>
 
             <div>
               <strong>participant raw</strong> —
@@ -1668,8 +1763,8 @@ export default function App() {
                 ? "1200px"
                 : "1600px"
               : isShortLandscape
-                ? "920px"
-                : "760px",
+              ? "920px"
+              : "760px",
             position: "relative",
             overflow: "visible",
             margin: "0 auto",
@@ -1697,7 +1792,12 @@ export default function App() {
           )}
 
           {!stageIsWheel && (
-            <div style={{ textAlign: "center", marginBottom: isShortLandscape ? "10px" : "18px" }}>
+            <div
+              style={{
+                textAlign: "center",
+                marginBottom: isShortLandscape ? "10px" : "18px",
+              }}
+            >
               <h1
                 style={{
                   fontSize: isShortLandscape ? "24px" : "32px",
@@ -1722,8 +1822,9 @@ export default function App() {
                     maxWidth: "680px",
                   }}
                 >
-                  You are the group&apos;s host, which means only you can edit entries unless
-                  you transfer the host role to someone else below.
+                  You are the group&apos;s host, which means only you can edit
+                  entries unless you transfer the host role to someone else
+                  below.
                 </p>
               )}
             </div>
@@ -1771,7 +1872,10 @@ export default function App() {
                         display: "flex",
                         gap: "8px",
                         alignItems: "stretch",
-                        flexWrap: viewportSize.width > viewportSize.height ? "wrap" : "nowrap",
+                        flexWrap:
+                          viewportSize.width > viewportSize.height
+                            ? "wrap"
+                            : "nowrap",
                         width: "100%",
                         maxWidth:
                           viewportSize.width > viewportSize.height
@@ -1783,6 +1887,14 @@ export default function App() {
                       <select
                         value={selectedHostId}
                         onChange={(e) => setSelectedHostId(e.target.value)}
+                        onFocus={() => {
+                          refreshRoomFromServer().catch((error) => {
+                            console.error(
+                              "Failed to refresh room before transfer:",
+                              error
+                            );
+                          });
+                        }}
                         style={{
                           flex: isShortLandscape ? "1 1 320px" : "0 1 420px",
                           maxWidth: isShortLandscape ? "760px" : "420px",
@@ -1916,7 +2028,11 @@ export default function App() {
                             type="text"
                             value={entry}
                             placeholder={`Entry ${index + 1}`}
-                            onChange={(e) => handleEntryChange(index, e.target.value)}
+                            onChange={(e) =>
+                              handleEntryChange(index, e.target.value)
+                            }
+                            onBlur={handleEntryBlur}
+                            onKeyDown={handleEntryKeyDown}
                             style={{
                               flex: 1,
                               minWidth: 0,
@@ -1997,7 +2113,9 @@ export default function App() {
                             }}
                           />
                         )}
-                        {isGoingToSpinner ? "Heading to Spinner..." : "Go to Spinner"}
+                        {isGoingToSpinner
+                          ? "Heading to Spinner..."
+                          : "Go to Spinner"}
                       </button>
                     </div>
                   </div>
@@ -2047,7 +2165,10 @@ export default function App() {
                         display: "flex",
                         gap: "8px",
                         alignItems: "stretch",
-                        flexWrap: viewportSize.width > viewportSize.height ? "wrap" : "nowrap",
+                        flexWrap:
+                          viewportSize.width > viewportSize.height
+                            ? "wrap"
+                            : "nowrap",
                         width: "100%",
                         maxWidth:
                           viewportSize.width > viewportSize.height
@@ -2106,7 +2227,9 @@ export default function App() {
                       }}
                     >
                       <span style={{ color: "#ffffff", fontWeight: 700 }}>
-                        {roomData?.mode === "participants" ? "Spin Participants" : "Spin Custom Entries"}
+                        {roomData?.mode === "participants"
+                          ? "Spin Participants"
+                          : "Spin Custom Entries"}
                       </span>
 
                       <button
@@ -2116,7 +2239,10 @@ export default function App() {
                           height: "30px",
                           borderRadius: "999px",
                           border: "1px solid #56308d",
-                          background: roomData?.mode === "participants" ? "#3a1d63" : "#111827",
+                          background:
+                            roomData?.mode === "participants"
+                              ? "#3a1d63"
+                              : "#111827",
                           position: "relative",
                           padding: 0,
                           opacity: 0.75,
@@ -2126,7 +2252,8 @@ export default function App() {
                           style={{
                             position: "absolute",
                             top: "3px",
-                            left: roomData?.mode === "participants" ? "31px" : "3px",
+                            left:
+                              roomData?.mode === "participants" ? "31px" : "3px",
                             width: "22px",
                             height: "22px",
                             borderRadius: "999px",
@@ -2151,7 +2278,9 @@ export default function App() {
                         marginBottom: "12px",
                       }}
                     >
-                      {(roomData?.entries?.length ? roomData.entries : ["", "", ""]).map((entry, index) => (
+                      {(roomData?.entries?.length
+                        ? roomData.entries
+                        : ["", "", ""]).map((entry, index) => (
                         <div
                           key={index}
                           style={{
@@ -2318,7 +2447,8 @@ export default function App() {
                           lineHeight: 1.45,
                         }}
                       >
-                        Please give them a moment while they finish entering the options.
+                        Please give them a moment while they finish entering the
+                        options.
                       </div>
                     </div>
                   </div>
@@ -2377,20 +2507,35 @@ export default function App() {
                       }}
                     >
                       <defs>
-                        <radialGradient id="rimPurpleGradient" cx="50%" cy="40%" r="70%">
+                        <radialGradient
+                          id="rimPurpleGradient"
+                          cx="50%"
+                          cy="40%"
+                          r="70%"
+                        >
                           <stop offset="0%" stopColor="#8e57d3" />
                           <stop offset="55%" stopColor={RIM_PURPLE} />
                           <stop offset="100%" stopColor={RIM_PURPLE_DARK} />
                         </radialGradient>
 
-                        <radialGradient id="goldStudGradient" cx="35%" cy="30%" r="75%">
+                        <radialGradient
+                          id="goldStudGradient"
+                          cx="35%"
+                          cy="30%"
+                          r="75%"
+                        >
                           <stop offset="0%" stopColor="#fff6c7" />
                           <stop offset="40%" stopColor="#f8d96b" />
                           <stop offset="75%" stopColor="#d19a1b" />
                           <stop offset="100%" stopColor="#8d5b0d" />
                         </radialGradient>
 
-                        <radialGradient id="hubDarkGradient" cx="40%" cy="35%" r="80%">
+                        <radialGradient
+                          id="hubDarkGradient"
+                          cx="40%"
+                          cy="35%"
+                          r="80%"
+                        >
                           <stop offset="0%" stopColor="#4b3720" />
                           <stop offset="38%" stopColor="#2b2119" />
                           <stop offset="100%" stopColor="#17120f" />
@@ -2428,23 +2573,26 @@ export default function App() {
 
                         const rawRotation = midAngle - 90;
                         const shouldFlipText = midAngle > 180;
-                        const textRotation = shouldFlipText ? rawRotation + 180 : rawRotation;
+                        const textRotation = shouldFlipText
+                          ? rawRotation + 180
+                          : rawRotation;
 
                         const textColor = getSliceTextColor(index);
                         const fillColor = getSliceFill(index);
 
-                        const label = entry.length > 17 ? entry.slice(0, 17) + "…" : entry;
+                        const label =
+                          entry.length > 17 ? entry.slice(0, 17) + "…" : entry;
 
                         const sliceFontSize =
                           label.length <= 6
                             ? 42
                             : label.length <= 8
-                              ? 36
-                              : label.length <= 10
-                                ? 30
-                                : label.length <= 12
-                                  ? 24
-                                  : 20;
+                            ? 36
+                            : label.length <= 10
+                            ? 30
+                            : label.length <= 12
+                            ? 24
+                            : 20;
 
                         return (
                           <g key={`${entry}-${index}`}>
@@ -2555,7 +2703,8 @@ export default function App() {
                         boxShadow: "0 12px 34px rgba(0,0,0,0.35)",
                         pointerEvents: "auto",
                         userSelect: "none",
-                        cursor: phase === "ready" && isHost ? "pointer" : "default",
+                        cursor:
+                          phase === "ready" && isHost ? "pointer" : "default",
                       }}
                     >
                       {phase === "ready" && (
@@ -2623,7 +2772,9 @@ export default function App() {
                         left: "50%",
                         bottom: isShortLandscape ? "10px" : "7%",
                         transform: "translateX(-50%)",
-                        width: isShortLandscape ? "min(78%, 420px)" : "min(72%, 560px)",
+                        width: isShortLandscape
+                          ? "min(78%, 420px)"
+                          : "min(72%, 560px)",
                         background: "rgba(7, 7, 10, 0.95)",
                         border: `1px solid ${GOLD_DARK}`,
                         borderRadius: "5px",
@@ -2705,7 +2856,10 @@ export default function App() {
                               >
                                 Keep Spinning
                               </button>
-                              <button onClick={handleStartFresh} style={mutedButtonStyle}>
+                              <button
+                                onClick={handleStartFresh}
+                                style={mutedButtonStyle}
+                              >
                                 Start Fresh
                               </button>
                             </div>
